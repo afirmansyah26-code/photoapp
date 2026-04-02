@@ -1,26 +1,132 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: #1e40af;
+  --color-primary-light: #3b82f6;
+  --color-primary-dark: #1e3a8a;
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --color-secondary: #f59e0b;
+  --color-secondary-light: #fbbf24;
+  --color-accent: #10b981;
+  --color-accent-light: #34d399;
+  --color-danger: #ef4444;
+  --color-danger-light: #f87171;
+  --color-surface: #ffffff;
+  --color-surface-dim: #f8fafc;
+  --color-surface-dark: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-dark: #cbd5e1;
+  --color-text: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #f8fafc;
+  --foreground: #1e293b;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+/* Stagger children animations */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeIn 0.4s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.4s; }
+.stagger-children > *:nth-child(9) { animation-delay: 0.45s; }
+.stagger-children > *:nth-child(10) { animation-delay: 0.5s; }
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Drop zone */
+.dropzone-active {
+  border-color: var(--color-primary-500) !important;
+  background: var(--color-primary-50) !important;
 }
