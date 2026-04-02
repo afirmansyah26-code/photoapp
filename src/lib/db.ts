@@ -192,6 +192,18 @@ function runStartupTasks(db: ReturnType<typeof Database>) {
   }
 }
 
+// Reset DB connection — call after restore to pick up new database file
+export function resetDb() {
+  if (_db) {
+    try { _db.close(); } catch { /* */ }
+    _db = null;
+    _initialized = false;
+    console.log('[DB] Connection reset — will reinitialize on next access');
+  }
+}
+
+export { dbPath };
+
 // Use Proxy so `db.prepare(...)` works seamlessly — lazy init on first access
 const db = new Proxy({} as ReturnType<typeof Database>, {
   get(_target, prop) {

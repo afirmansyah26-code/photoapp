@@ -1,11 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
+import { resetDb, dbPath } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-
-// Resolve DB path consistently with db.ts
-const dbPath = process.env.DB_PATH || path.resolve(process.cwd(), 'database.sqlite');
 
 export async function POST(request: Request) {
   try {
@@ -100,6 +98,9 @@ export async function POST(request: Request) {
 
       fs.rmSync(restoreDir, { recursive: true, force: true });
     }
+
+    // Reset DB connection so app uses the restored database
+    resetDb();
 
     // After restore: recover files from trash
     const recoveredCount = recoverFilesFromTrash();
