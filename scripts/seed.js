@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
 
-const dbPath = path.resolve(process.cwd(), 'database.sqlite');
+const dbPath = process.env.DB_PATH || path.resolve(process.cwd(), 'database.sqlite');
 const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');

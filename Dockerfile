@@ -35,6 +35,14 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/package.json ./package.json
 
+# Copy seed script dependencies
+COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
+COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+COPY --from=builder /app/node_modules/bindings ./node_modules/bindings
+COPY --from=builder /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
+COPY --from=builder /app/node_modules/prebuild-install ./node_modules/prebuild-install
+COPY --from=builder /app/node_modules/node-abi ./node_modules/node-abi
+
 # Create data directories
 RUN mkdir -p /app/data /app/public/uploads/originals /app/public/uploads/collages /app/public/uploads/trash && \
     chown -R nextjs:nodejs /app
