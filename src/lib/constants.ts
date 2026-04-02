@@ -1,7 +1,12 @@
 export const APP_NAME = 'Kolase Pembelajaran';
 export const SCHOOL_NAME = 'SLB BCD Nusantara';
 
-export const JWT_SECRET = process.env.JWT_SECRET || 'kolase-slb-nusantara-secret-key-2024';
+// JWT: MUST be set via environment variable in production
+const defaultSecret = 'kolase-dev-secret-change-in-production';
+export const JWT_SECRET = process.env.JWT_SECRET || defaultSecret;
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.warn('[SECURITY] JWT_SECRET is not set! Using default secret is INSECURE in production.');
+}
 export const JWT_EXPIRES_IN = '7d';
 export const COOKIE_NAME = 'kolase_token';
 
@@ -15,3 +20,4 @@ export const COLLAGE_GAP = 6;
 export const UPLOAD_DIR = 'uploads';
 export const ORIGINALS_DIR = `${UPLOAD_DIR}/originals`;
 export const COLLAGES_DIR = `${UPLOAD_DIR}/collages`;
+export const TRASH_DIR = `${UPLOAD_DIR}/trash`;

@@ -1,10 +1,25 @@
 import { cookies } from 'next/headers';
+import { type NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { comparePassword, signToken } from '@/lib/auth';
 import { COOKIE_NAME } from '@/lib/constants';
+import { checkLoginRateLimit, resetLoginRateLimit } from '@/lib/rate-limit';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate limiting by IP
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || request.headers.get('x-real-ip')
+      || 'unknown';
+
+    const rateCheck = checkLoginRateLimit(ip);
+    if (!rateCheck.allowed) {
+      return Response.json(
+        { success: false, error: `Terlalu banyak percobaan login. Coba lagi dalam ${Math.ceil((rateCheck.retryAfterSeconds || 0) / 60)} menit.` },
+        { status: 429 }
+      );
+    }
+
     const { username, password } = await request.json();
 
     if (!username || !password) {
@@ -33,11 +48,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Login successful — reset rate limit for this IP
+    resetLoginRateLimit(ip);
+
     const token = await signToken({
       userId: user.id,
       username: user.username,
       name: user.name,
-      role: user.role as 'admin' | 'guru',
+      role: user.role as 'superadmin' | 'admin' | 'kepsek' | 'guru',
     });
 
     const cookieStore = await cookies();

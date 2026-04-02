@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+public/uploads/originals/*
+public/uploads/collages/*
+public/uploads/trash/*
+backups/
+debug-*
+.env
+.env.local

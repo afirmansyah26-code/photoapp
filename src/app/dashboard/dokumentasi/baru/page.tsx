@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import { useUser } from '../../layout';
-import { MAX_PHOTOS_PER_ENTRY } from '@/lib/constants';
+import { MAX_PHOTOS_PER_ENTRY, MAX_FILE_SIZE } from '@/lib/constants';
 import type { CollageLayout } from '@/types';
 
 interface PreviewFile {
@@ -29,13 +29,41 @@ export default function CreateDokumentasiPage() {
   const [namaKegiatan, setNamaKegiatan] = useState('');
   const [deskripsi, setDeskripsi] = useState('');
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
+    // Filter out files that exceed max size
+    const validFiles: File[] = [];
+    const oversizedFiles: string[] = [];
+
+    acceptedFiles.forEach(file => {
+      if (file.size > MAX_FILE_SIZE) {
+        oversizedFiles.push(`${file.name} (${formatFileSize(file.size)})`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (oversizedFiles.length > 0) {
+      toast.error(
+        `${oversizedFiles.length} file melebihi batas ${formatFileSize(MAX_FILE_SIZE)}:\n${oversizedFiles.join(', ')}`,
+        { duration: 5000 }
+      );
+    }
+
     const remaining = MAX_PHOTOS_PER_ENTRY - files.length;
-    const newFiles = acceptedFiles.slice(0, remaining).map(file => ({
+    const newFiles = validFiles.slice(0, remaining).map(file => ({
       file,
       preview: URL.createObjectURL(file),
     }));
-    setFiles(prev => [...prev, ...newFiles]);
+
+    if (newFiles.length > 0) {
+      setFiles(prev => [...prev, ...newFiles]);
+    }
   }, [files.length]);
 
   const removeFile = (index: number) => {
@@ -51,7 +79,26 @@ export default function CreateDokumentasiPage() {
     onDrop,
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.webp'] },
     maxFiles: MAX_PHOTOS_PER_ENTRY,
+    maxSize: MAX_FILE_SIZE,
     multiple: true,
+    onDropRejected: (fileRejections) => {
+      const sizeErrors = fileRejections.filter(r =>
+        r.errors.some(e => e.code === 'file-too-large')
+      );
+      if (sizeErrors.length > 0) {
+        const names = sizeErrors.map(r => `${r.file.name} (${formatFileSize(r.file.size)})`);
+        toast.error(
+          `${names.length} file melebihi batas ${formatFileSize(MAX_FILE_SIZE)}:\n${names.join(', ')}`,
+          { duration: 5000 }
+        );
+      }
+      const typeErrors = fileRejections.filter(r =>
+        r.errors.some(e => e.code === 'file-invalid-type')
+      );
+      if (typeErrors.length > 0) {
+        toast.error('Format file harus JPG, PNG, atau WebP');
+      }
+    },
   });
 
   const handleUpload = async () => {

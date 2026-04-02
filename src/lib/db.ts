@@ -2,7 +2,8 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-const dbPath = path.resolve(process.cwd(), 'database.sqlite');
+// Support Docker volume: DB_PATH env var or default to project root
+const dbPath = process.env.DB_PATH || path.resolve(process.cwd(), 'database.sqlite');
 
 // Legacy: Check for pending restore BEFORE opening the database
 // (kept for backward compatibility with old restore flow)
