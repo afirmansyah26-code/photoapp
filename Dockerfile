@@ -22,7 +22,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Install runtime deps only
-RUN apt-get update && apt-get install -y libvips42 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libvips42 unzip zip && rm -rf /var/lib/apt/lists/*
 
 # Non-root user
 RUN addgroup --system --gid 1001 nodejs && \

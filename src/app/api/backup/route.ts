@@ -5,6 +5,8 @@ import path from 'path';
 import { execSync } from 'child_process';
 import db from '@/lib/db';
 
+const dbPath = process.env.DB_PATH || path.resolve(process.cwd(), 'database.sqlite');
+
 // GET /api/backup?type=db  → download database only
 // GET /api/backup?type=full → download database + uploads as zip
 export async function GET(request: NextRequest) {
@@ -15,16 +17,14 @@ export async function GET(request: NextRequest) {
     }
 
     const type = request.nextUrl.searchParams.get('type') || 'db';
-    const dbPath = path.resolve(process.cwd(), 'database.sqlite');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const backupDir = path.resolve(process.cwd(), 'backups');
     if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
 
-    // Checkpoint WAL to flush all pending changes to the main database file
+    // Checkpoint WAL to flush all pending changes
     db.pragma('wal_checkpoint(TRUNCATE)');
 
     if (type === 'db') {
-      // Read the database file AFTER checkpoint
       const dbBuffer = fs.readFileSync(dbPath);
       return new NextResponse(dbBuffer, {
         headers: {
@@ -40,10 +40,8 @@ export async function GET(request: NextRequest) {
     const backupFolder = path.join(backupDir, backupName);
     fs.mkdirSync(backupFolder, { recursive: true });
 
-    // Copy database (already checkpointed above)
     fs.copyFileSync(dbPath, path.join(backupFolder, 'database.sqlite'));
 
-    // Copy uploads folder if exists
     if (fs.existsSync(uploadsPath)) {
       copyFolderRecursive(uploadsPath, path.join(backupFolder, 'uploads'));
     }
@@ -51,12 +49,17 @@ export async function GET(request: NextRequest) {
     const zipPath = `${backupFolder}.zip`;
 
     try {
-      execSync(
-        `powershell -Command "Compress-Archive -Path '${backupFolder}\\*' -DestinationPath '${zipPath}' -Force"`,
-        { timeout: 120000 }
-      );
+      if (process.platform === 'win32') {
+        execSync(
+          `powershell -Command "Compress-Archive -Path '${backupFolder}\\*' -DestinationPath '${zipPath}' -Force"`,
+          { timeout: 120000 }
+        );
+      } else {
+        execSync(`cd "${backupFolder}" && zip -r "${zipPath}" .`, { timeout: 120000 });
+      }
     } catch {
       deleteFolderRecursive(backupFolder);
+      // Fallback: return database only
       const dbBuffer = fs.readFileSync(dbPath);
       return new NextResponse(dbBuffer, {
         headers: {

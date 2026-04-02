@@ -4,7 +4,9 @@ import { execSync } from 'child_process';
 
 export const dynamic = 'force-dynamic';
 
-// Use the same FormData pattern as /api/upload which works
+// Resolve DB path consistently with db.ts
+const dbPath = process.env.DB_PATH || path.resolve(process.cwd(), 'database.sqlite');
+
 export async function POST(request: Request) {
   try {
     const role = request.headers.get('x-user-role');
@@ -29,14 +31,16 @@ export async function POST(request: Request) {
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     console.log(`[Restore] Received file: ${file.name}, size: ${fileBuffer.length} bytes`);
+    console.log(`[Restore] DB path: ${dbPath}`);
+
+    // Ensure DB directory exists
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 
     const backupDir = path.resolve(process.cwd(), 'backups');
     if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
 
-    const dbPath = path.resolve(process.cwd(), 'database.sqlite');
-
     if (isSqlite) {
-      // Apply restore immediately instead of pending
       // Remove WAL/SHM first
       for (const ext of ['-wal', '-shm']) {
         try { if (fs.existsSync(dbPath + ext)) fs.unlinkSync(dbPath + ext); } catch { /* */ }
@@ -54,11 +58,18 @@ export async function POST(request: Request) {
 
       const extractDir = path.join(restoreDir, 'extracted');
       try {
-        execSync(
-          `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${extractDir}' -Force"`,
-          { timeout: 120000 }
-        );
-      } catch {
+        // Cross-platform: use unzip on Linux, powershell on Windows
+        if (process.platform === 'win32') {
+          execSync(
+            `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${extractDir}' -Force"`,
+            { timeout: 120000 }
+          );
+        } else {
+          fs.mkdirSync(extractDir, { recursive: true });
+          execSync(`unzip -o "${zipPath}" -d "${extractDir}"`, { timeout: 120000 });
+        }
+      } catch (err) {
+        console.error('[Restore] Extract error:', err);
         fs.rmSync(restoreDir, { recursive: true, force: true });
         return Response.json({ success: false, error: 'Gagal mengekstrak zip' }, { status: 500 });
       }
@@ -69,7 +80,7 @@ export async function POST(request: Request) {
         return Response.json({ success: false, error: 'database.sqlite tidak ditemukan di zip' }, { status: 400 });
       }
 
-      // Apply restore immediately
+      // Apply restore
       for (const ext of ['-wal', '-shm']) {
         try { if (fs.existsSync(dbPath + ext)) fs.unlinkSync(dbPath + ext); } catch { /* */ }
       }
@@ -90,7 +101,7 @@ export async function POST(request: Request) {
       fs.rmSync(restoreDir, { recursive: true, force: true });
     }
 
-    // After restore: immediately recover files from trash for active records
+    // After restore: recover files from trash
     const recoveredCount = recoverFilesFromTrash();
 
     return Response.json({
@@ -103,15 +114,10 @@ export async function POST(request: Request) {
   }
 }
 
-/**
- * Recover files from trash for active dokumentasi records.
- * Opens a separate DB connection to read the restored database.
- */
 function recoverFilesFromTrash(): number {
   let recoveredCount = 0;
   try {
     const Database = require('better-sqlite3');
-    const dbPath = path.resolve(process.cwd(), 'database.sqlite');
     const tempDb = new Database(dbPath, { readonly: true });
 
     const trashDir = path.resolve(process.cwd(), 'public', 'uploads', 'trash');
@@ -120,14 +126,12 @@ function recoverFilesFromTrash(): number {
       return 0;
     }
 
-    // Check if deleted_at column exists
     let hasDeletedAt = false;
     try {
       tempDb.prepare("SELECT deleted_at FROM dokumentasi LIMIT 0").run();
       hasDeletedAt = true;
     } catch { /* column doesn't exist in old backups */ }
 
-    // Get all foto URLs from active records
     const fotoQuery = hasDeletedAt
       ? 'SELECT f.foto_url FROM foto f JOIN dokumentasi d ON f.dokumentasi_id = d.id WHERE d.deleted_at IS NULL'
       : 'SELECT foto_url FROM foto';
