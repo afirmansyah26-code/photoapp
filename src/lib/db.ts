@@ -83,6 +83,8 @@ try {
 try {
   const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get() as { sql: string } | undefined;
   if (tableInfo && !tableInfo.sql.includes('kepsek')) {
+    // CRITICAL: Disable foreign keys during table swap to prevent CASCADE DELETE
+    db.pragma('foreign_keys = OFF');
     db.exec(`
       CREATE TABLE users_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,9 +98,11 @@ try {
       DROP TABLE users;
       ALTER TABLE users_new RENAME TO users;
     `);
+    db.pragma('foreign_keys = ON');
     console.log('[DB] Migrated users table to include kepsek role');
   }
 } catch (err) {
+  db.pragma('foreign_keys = ON');
   console.error('[DB] Error migrating kepsek role:', err);
 }
 
