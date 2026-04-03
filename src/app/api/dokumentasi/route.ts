@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tanggal, guru_id, guru_name, nama_kegiatan, deskripsi, layout, upload_mode, photo_paths } = body;
+    const { tanggal, guru_id, guru_name, nama_kegiatan, deskripsi, video_url, layout, upload_mode, photo_paths } = body;
 
     if (!tanggal || !guru_id || !guru_name || !nama_kegiatan) {
       return Response.json(
@@ -91,8 +91,8 @@ export async function POST(request: Request) {
 
     // Insert dokumentasi
     const insertDoc = db.prepare(
-      `INSERT INTO dokumentasi (tanggal, guru_id, guru_name, nama_kegiatan, deskripsi, upload_mode, layout, collage_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, '')`
+      `INSERT INTO dokumentasi (tanggal, guru_id, guru_name, nama_kegiatan, deskripsi, video_url, upload_mode, layout, collage_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, '')`
     );
 
     const result = insertDoc.run(
@@ -101,6 +101,7 @@ export async function POST(request: Request) {
       guru_name,
       nama_kegiatan,
       deskripsi || '',
+      video_url || '',
       mode,
       mode === 'single' ? 'grid-1x1' : (layout || 'grid-2x2')
     );

@@ -15,6 +15,7 @@ export interface Dokumentasi {
   guru_name: string;
   nama_kegiatan: string;
   deskripsi: string;
+  video_url: string;
   upload_mode: UploadMode;
   layout: CollageLayout;
   collage_url: string;

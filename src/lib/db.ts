@@ -103,6 +103,13 @@ function runMigrations(db: ReturnType<typeof Database>) {
     db.exec("ALTER TABLE dokumentasi ADD COLUMN upload_mode TEXT NOT NULL DEFAULT 'collage'");
   }
 
+  // Migration: add video_url column if it doesn't exist
+  try {
+    db.prepare("SELECT video_url FROM dokumentasi LIMIT 1").get();
+  } catch {
+    db.exec("ALTER TABLE dokumentasi ADD COLUMN video_url TEXT NOT NULL DEFAULT ''");
+  }
+
   // Migration: update CHECK constraint to include 'kepsek' role
   try {
     const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get() as { sql: string } | undefined;

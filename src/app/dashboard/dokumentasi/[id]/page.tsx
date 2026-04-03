@@ -19,6 +19,7 @@ interface DokumentasiDetail {
   guru_name: string;
   nama_kegiatan: string;
   deskripsi: string;
+  video_url: string;
   upload_mode: string;
   layout: string;
   collage_url: string;
@@ -96,6 +97,18 @@ export default function DetailDokumentasiPage() {
     } catch {
       toast.error('Gagal mendownload kolase');
     }
+  };
+
+  const extractYoutubeId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
   };
 
   const formatDate = (dateStr: string) => {
@@ -219,6 +232,46 @@ export default function DetailDokumentasiPage() {
             <div className="mt-4 pt-4 border-t border-border">
               <p className="text-xs text-text-muted font-medium mb-1">Deskripsi Kegiatan</p>
               <p className="text-sm text-text leading-relaxed">{doc.deskripsi}</p>
+            </div>
+          )}
+          {doc.video_url && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+                  <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="white"/>
+                </svg>
+                <p className="text-xs text-text-muted font-medium">Video Kegiatan</p>
+              </div>
+              {(() => {
+                const videoId = extractYoutubeId(doc.video_url);
+                if (videoId) {
+                  return (
+                    <div className="relative w-full rounded-xl overflow-hidden bg-black" style={{ paddingBottom: '56.25%' }}>
+                      <iframe
+                        className="absolute inset-0 w-full h-full"
+                        src={`https://www.youtube.com/embed/${videoId}`}
+                        title="Video Kegiatan"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  );
+                }
+                return (
+                  <a
+                    href={doc.video_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Tonton Video
+                  </a>
+                );
+              })()}
             </div>
           )}
         </div>
