@@ -8,6 +8,7 @@ interface CollageOptions {
   imagePaths: string[];
   layout: CollageLayout;
   documentId: number;
+  uploadMode?: 'single' | 'collage';
   namaKegiatan?: string;
   tanggal?: string;
   namaSekolah?: string;
@@ -185,7 +186,7 @@ async function resizeWithBorder(buf: Buffer, width: number, height: number): Pro
 }
 
 export async function generateCollage(options: CollageOptions): Promise<string> {
-  const { imagePaths, layout, documentId, namaKegiatan, tanggal, namaSekolah } = options;
+  const { imagePaths, layout, documentId, uploadMode, namaKegiatan, tanggal, namaSekolah } = options;
 
   const collagesPath = path.join(process.cwd(), 'public', COLLAGES_DIR);
   if (!fs.existsSync(collagesPath)) {
@@ -204,6 +205,77 @@ export async function generateCollage(options: CollageOptions): Promise<string> 
 
   const hasHeader = !!(namaKegiatan && tanggal && namaSekolah);
   const headerOffset = hasHeader ? HEADER_HEIGHT : 0;
+
+  // ── Single photo mode: height follows the photo's aspect ratio ──
+  if (uploadMode === 'single' && imageBuffers.length > 0) {
+    const padding = COLLAGE_GAP * 3;
+    const photoWidth = COLLAGE_SIZE - padding * 2;
+
+    // Read actual image dimensions
+    const metadata = await sharp(imageBuffers[0]).metadata();
+    const origW = metadata.width || 1200;
+    const origH = metadata.height || 1200;
+    const aspectRatio = origH / origW;
+
+    // Photo height proportional to width based on original aspect ratio
+    const photoHeight = Math.round(photoWidth * aspectRatio);
+    const canvasWidth = COLLAGE_SIZE;
+    const canvasHeight = headerOffset + padding + photoHeight + PHOTO_BORDER * 2 + padding;
+
+    // Resize photo to fit, preserving aspect ratio (no crop)
+    const innerW = photoWidth - PHOTO_BORDER * 2;
+    const innerH = photoHeight - PHOTO_BORDER * 2;
+    const resizedPhoto = await sharp(imageBuffers[0])
+      .resize(innerW > 0 ? innerW : photoWidth, innerH > 0 ? innerH : photoHeight, { fit: 'inside', withoutEnlargement: false })
+      .extend({
+        top: PHOTO_BORDER,
+        bottom: PHOTO_BORDER,
+        left: PHOTO_BORDER,
+        right: PHOTO_BORDER,
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      })
+      .jpeg({ quality: 90 })
+      .toBuffer();
+
+    // Get the actual size of the resized photo for centering
+    const resizedMeta = await sharp(resizedPhoto).metadata();
+    const finalPhotoW = resizedMeta.width || photoWidth;
+    const photoLeft = Math.round((canvasWidth - finalPhotoW) / 2);
+
+    const bgColor = { r: 245, g: 241, b: 235 };
+    const bgPattern = createEducationBackground(canvasWidth, canvasHeight);
+
+    const composites: sharp.OverlayOptions[] = [
+      { input: bgPattern, top: 0, left: 0 },
+    ];
+
+    if (hasHeader) {
+      const headerSvg = createHeaderSvg(canvasWidth, namaKegiatan!, tanggal!, namaSekolah!);
+      composites.push({ input: headerSvg, top: 0, left: 0 });
+    }
+
+    composites.push({
+      input: resizedPhoto,
+      left: photoLeft,
+      top: headerOffset + padding,
+    });
+
+    await sharp({
+      create: {
+        width: canvasWidth,
+        height: canvasHeight,
+        channels: 3,
+        background: bgColor,
+      },
+    })
+      .composite(composites)
+      .jpeg({ quality: 92 })
+      .toFile(outputPath);
+
+    return `/${COLLAGES_DIR}/${outputFilename}`;
+  }
+
+  // ── Collage mode (existing logic) ──
   const count = imageBuffers.length;
 
   let photoComposites: { input: Buffer; left: number; top: number }[] = [];

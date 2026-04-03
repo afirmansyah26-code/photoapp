@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useUser } from '../../layout';
 import { MAX_PHOTOS_PER_ENTRY, MAX_FILE_SIZE } from '@/lib/constants';
 import type { CollageLayout } from '@/types';
+import type { UploadMode } from '@/types';
 
 interface PreviewFile {
   file: File;
@@ -18,6 +19,7 @@ export default function CreateDokumentasiPage() {
   const user = useUser();
 
   const [step, setStep] = useState(1);
+  const [uploadMode, setUploadMode] = useState<UploadMode>('collage');
   const [files, setFiles] = useState<PreviewFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadedPaths, setUploadedPaths] = useState<string[]>([]);
@@ -28,6 +30,16 @@ export default function CreateDokumentasiPage() {
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [namaKegiatan, setNamaKegiatan] = useState('');
   const [deskripsi, setDeskripsi] = useState('');
+
+  const isSingle = uploadMode === 'single';
+  const maxFiles = isSingle ? 1 : MAX_PHOTOS_PER_ENTRY;
+
+  // Total steps: single=3 (mode→upload→data), collage=4 (mode→upload→layout→data)
+  const totalSteps = isSingle ? 3 : 4;
+
+  const stepLabels = isSingle
+    ? ['Pilih Mode', 'Upload Foto', 'Isi Data']
+    : ['Pilih Mode', 'Upload Foto', 'Pilih Layout', 'Isi Data'];
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -55,7 +67,7 @@ export default function CreateDokumentasiPage() {
       );
     }
 
-    const remaining = MAX_PHOTOS_PER_ENTRY - files.length;
+    const remaining = maxFiles - files.length;
     const newFiles = validFiles.slice(0, remaining).map(file => ({
       file,
       preview: URL.createObjectURL(file),
@@ -64,7 +76,7 @@ export default function CreateDokumentasiPage() {
     if (newFiles.length > 0) {
       setFiles(prev => [...prev, ...newFiles]);
     }
-  }, [files.length]);
+  }, [files.length, maxFiles]);
 
   const removeFile = (index: number) => {
     setFiles(prev => {
@@ -78,9 +90,9 @@ export default function CreateDokumentasiPage() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.webp'] },
-    maxFiles: MAX_PHOTOS_PER_ENTRY,
+    maxFiles: maxFiles,
     maxSize: MAX_FILE_SIZE,
-    multiple: true,
+    multiple: !isSingle,
     onDropRejected: (fileRejections) => {
       const sizeErrors = fileRejections.filter(r =>
         r.errors.some(e => e.code === 'file-too-large')
@@ -121,7 +133,12 @@ export default function CreateDokumentasiPage() {
       if (data.success) {
         setUploadedPaths(data.data.paths);
         toast.success(`${data.data.paths.length} foto berhasil diupload`);
-        setStep(2);
+        if (isSingle) {
+          // Skip layout step for single mode
+          setStep(3);
+        } else {
+          setStep(3);
+        }
       } else {
         toast.error(data.error || 'Gagal upload foto');
       }
@@ -149,7 +166,8 @@ export default function CreateDokumentasiPage() {
           guru_name: user?.name,
           nama_kegiatan: namaKegiatan,
           deskripsi,
-          layout,
+          upload_mode: uploadMode,
+          layout: isSingle ? 'grid-1x1' : layout,
           photo_paths: uploadedPaths,
         }),
       });
@@ -168,9 +186,21 @@ export default function CreateDokumentasiPage() {
     }
   };
 
+  const handleSelectMode = (mode: UploadMode) => {
+    setUploadMode(mode);
+    // Reset files when switching mode
+    files.forEach(f => URL.revokeObjectURL(f.preview));
+    setFiles([]);
+    setUploadedPaths([]);
+    setStep(2);
+  };
+
+  // For collage mode: which step is the data step?
+  const dataStep = isSingle ? 3 : 4;
+  const layoutStep = isSingle ? -1 : 3; // -1 means no layout step
+
   const layouts: { value: CollageLayout; label: string; desc: string }[] = [
-    { value: 'grid-1x1', label: '1 Foto', desc: 'Untuk 1 foto saja' },
-    { value: 'grid-2x2', label: 'Grid 2×2', desc: 'Cocok untuk 4 foto' },
+    { value: 'grid-2x2', label: 'Grid 2×2', desc: 'Cocok untuk 2-4 foto' },
     { value: 'grid-3x3', label: 'Grid 3×3', desc: 'Cocok untuk 5-9 foto' },
     { value: 'grid-3x4', label: 'Grid 3×4', desc: 'Cocok untuk 10-12 foto' },
     { value: 'horizontal', label: 'Horizontal', desc: 'Foto berjajar horizontal' },
@@ -182,7 +212,18 @@ export default function CreateDokumentasiPage() {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => router.back()}
+          onClick={() => {
+            if (step > 1) {
+              // Go back to previous step
+              if (step === dataStep) {
+                setStep(isSingle ? 2 : layoutStep);
+              } else {
+                setStep(step - 1);
+              }
+            } else {
+              router.back();
+            }
+          }}
           className="text-sm text-text-secondary hover:text-text flex items-center gap-1 mb-2 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -195,61 +236,149 @@ export default function CreateDokumentasiPage() {
 
       {/* Steps indicator */}
       <div className="flex items-center gap-2 mb-6">
-        {[1, 2, 3].map(s => (
-          <div key={s} className="flex items-center gap-2 flex-1">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-              step >= s
-                ? 'bg-primary-600 text-white shadow-md shadow-primary-500/25'
-                : 'bg-surface-dark text-text-muted'
-            }`}>
-              {step > s ? (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              ) : s}
+        {Array.from({ length: totalSteps }).map((_, idx) => {
+          const s = idx + 1;
+          return (
+            <div key={s} className="flex items-center gap-2 flex-1">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                step >= s
+                  ? 'bg-primary-600 text-white shadow-md shadow-primary-500/25'
+                  : 'bg-surface-dark text-text-muted'
+              }`}>
+                {step > s ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : s}
+              </div>
+              <span className={`text-xs font-medium hidden sm:block ${step >= s ? 'text-primary-700' : 'text-text-muted'}`}>
+                {stepLabels[idx]}
+              </span>
+              {s < totalSteps && <div className={`flex-1 h-0.5 rounded-full ${step > s ? 'bg-primary-500' : 'bg-border'}`} />}
             </div>
-            <span className={`text-xs font-medium hidden sm:block ${step >= s ? 'text-primary-700' : 'text-text-muted'}`}>
-              {s === 1 ? 'Upload Foto' : s === 2 ? 'Pilih Layout' : 'Isi Data'}
-            </span>
-            {s < 3 && <div className={`flex-1 h-0.5 rounded-full ${step > s ? 'bg-primary-500' : 'bg-border'}`} />}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Step 1: Upload Photos */}
+      {/* Step 1: Choose Upload Mode */}
       {step === 1 && (
         <div className="bg-white rounded-2xl border border-border p-6 animate-scale-in">
-          <h2 className="text-lg font-semibold text-text mb-4">Upload Foto Kegiatan</h2>
-          <p className="text-sm text-text-secondary mb-4">Maksimal {MAX_PHOTOS_PER_ENTRY} foto (JPG, PNG, WebP)</p>
+          <h2 className="text-lg font-semibold text-text mb-2">Pilih Jenis Dokumentasi</h2>
+          <p className="text-sm text-text-secondary mb-6">Pilih apakah ingin mengupload 1 foto atau membuat kolase dari beberapa foto</p>
 
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
-              isDragActive
-                ? 'border-primary-500 bg-primary-50'
-                : 'border-border hover:border-primary-300 hover:bg-surface-dim'
-            }`}
-          >
-            <input {...getInputProps()} />
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-primary-50 rounded-2xl mb-3">
-              <svg className="w-7 h-7 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <p className="text-sm font-medium text-text">
-              {isDragActive ? 'Lepaskan foto di sini...' : 'Klik atau seret foto ke sini'}
-            </p>
-            <p className="text-xs text-text-muted mt-1">JPG, PNG, WebP • Maks 10MB per foto</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Single Photo Option */}
+            <button
+              onClick={() => handleSelectMode('single')}
+              className="group relative p-6 rounded-2xl border-2 border-border hover:border-primary-400 hover:shadow-lg transition-all duration-300 text-left overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+                  <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v13.5A1.5 1.5 0 003.75 21z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-bold text-text mb-1 group-hover:text-primary-700 transition-colors">Upload 1 Foto</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                  Upload satu foto dokumentasi. Tinggi template akan mengikuti ukuran foto Anda.
+                </p>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Pilih ini
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+
+            {/* Collage Option */}
+            <button
+              onClick={() => handleSelectMode('collage')}
+              className="group relative p-6 rounded-2xl border-2 border-border hover:border-accent hover:shadow-lg transition-all duration-300 text-left overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-orange-50 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative">
+                <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform">
+                  <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-bold text-text mb-1 group-hover:text-accent transition-colors">Upload Kolase</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                  Upload beberapa foto dan buat kolase dengan berbagai template layout.
+                </p>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-accent opacity-0 group-hover:opacity-100 transition-opacity">
+                  Pilih ini
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* Step 2: Upload Photos */}
+      {step === 2 && (
+        <div className="bg-white rounded-2xl border border-border p-6 animate-scale-in">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-lg font-semibold text-text">
+              {isSingle ? 'Upload 1 Foto' : 'Upload Foto Kegiatan'}
+            </h2>
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+              isSingle
+                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                : 'bg-amber-50 text-amber-700 border border-amber-200'
+            }`}>
+              {isSingle ? '📷 1 Foto' : '🖼️ Kolase'}
+            </span>
+          </div>
+          <p className="text-sm text-text-secondary mb-4">
+            {isSingle
+              ? 'Upload 1 foto dokumentasi (JPG, PNG, WebP)'
+              : `Maksimal ${MAX_PHOTOS_PER_ENTRY} foto (JPG, PNG, WebP)`}
+          </p>
+
+          {/* Show dropzone only if not reached max files */}
+          {files.length < maxFiles && (
+            <div
+              {...getRootProps()}
+              className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
+                isDragActive
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-border hover:border-primary-300 hover:bg-surface-dim'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <div className="inline-flex items-center justify-center w-14 h-14 bg-primary-50 rounded-2xl mb-3">
+                <svg className="w-7 h-7 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-text">
+                {isDragActive ? 'Lepaskan foto di sini...' : 'Klik atau seret foto ke sini'}
+              </p>
+              <p className="text-xs text-text-muted mt-1">
+                JPG, PNG, WebP • Maks 10MB per foto
+                {isSingle && ' • Hanya 1 foto'}
+              </p>
+            </div>
+          )}
 
           {/* Preview */}
           {files.length > 0 && (
             <div className="mt-4">
               <p className="text-sm font-medium text-text mb-2">{files.length} foto dipilih</p>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+              <div className={`grid gap-2 ${
+                isSingle ? 'grid-cols-1 max-w-sm' : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5'
+              }`}>
                 {files.map((f, i) => (
-                  <div key={i} className="relative group aspect-square rounded-xl overflow-hidden bg-surface-dim">
-                    <img src={f.preview} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                  <div key={i} className={`relative group overflow-hidden bg-surface-dim rounded-xl ${
+                    isSingle ? 'aspect-auto max-h-64' : 'aspect-square'
+                  }`}>
+                    <img src={f.preview} alt={`Preview ${i + 1}`} className={`w-full h-full ${isSingle ? 'object-contain' : 'object-cover'}`} />
                     <button
                       onClick={(e) => { e.stopPropagation(); removeFile(i); }}
                       className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
@@ -258,16 +387,24 @@ export default function CreateDokumentasiPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
-                    <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
-                      {i + 1}
-                    </div>
+                    {!isSingle && (
+                      <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                        {i + 1}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-between mt-6">
+            <button
+              onClick={() => { setStep(1); files.forEach(f => URL.revokeObjectURL(f.preview)); setFiles([]); }}
+              className="px-4 py-2.5 text-sm font-medium text-text-secondary hover:text-text transition-colors"
+            >
+              Kembali
+            </button>
             <button
               onClick={handleUpload}
               disabled={files.length === 0 || uploading}
@@ -294,8 +431,8 @@ export default function CreateDokumentasiPage() {
         </div>
       )}
 
-      {/* Step 2: Choose Layout */}
-      {step === 2 && (
+      {/* Step 3 (collage only): Choose Layout */}
+      {step === layoutStep && (
         <div className="bg-white rounded-2xl border border-border p-6 animate-scale-in">
           <h2 className="text-lg font-semibold text-text mb-4">Pilih Layout Kolase</h2>
 
@@ -311,11 +448,6 @@ export default function CreateDokumentasiPage() {
                 }`}
               >
                 <div className="mb-2">
-                  {l.value === 'grid-1x1' && (
-                    <div className="flex items-center justify-center w-12 h-12">
-                      <div className={`w-10 h-10 rounded ${layout === l.value ? 'bg-primary-400' : 'bg-border-dark'}`} />
-                    </div>
-                  )}
                   {l.value === 'grid-2x2' && (
                     <div className="grid grid-cols-2 gap-1 w-12 h-12">
                       {[1,2,3,4].map(i => <div key={i} className={`rounded ${layout === l.value ? 'bg-primary-400' : 'bg-border-dark'}`} />)}
@@ -362,13 +494,13 @@ export default function CreateDokumentasiPage() {
 
           <div className="flex justify-between">
             <button
-              onClick={() => setStep(1)}
+              onClick={() => setStep(2)}
               className="px-4 py-2.5 text-sm font-medium text-text-secondary hover:text-text transition-colors"
             >
               Kembali
             </button>
             <button
-              onClick={() => setStep(3)}
+              onClick={() => setStep(dataStep)}
               className="flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-xl hover:bg-primary-700 transition-colors shadow-md shadow-primary-500/20"
             >
               Lanjut
@@ -380,10 +512,19 @@ export default function CreateDokumentasiPage() {
         </div>
       )}
 
-      {/* Step 3: Fill Data */}
-      {step === 3 && (
+      {/* Final Step: Fill Data */}
+      {step === dataStep && (
         <div className="bg-white rounded-2xl border border-border p-6 animate-scale-in">
-          <h2 className="text-lg font-semibold text-text mb-4">Detail Kegiatan</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-lg font-semibold text-text">Detail Kegiatan</h2>
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+              isSingle
+                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                : 'bg-amber-50 text-amber-700 border border-amber-200'
+            }`}>
+              {isSingle ? '📷 1 Foto' : `🖼️ ${layouts.find(l => l.value === layout)?.label || 'Kolase'}`}
+            </span>
+          </div>
 
           <div className="space-y-4">
             {/* Nama Kegiatan */}
@@ -396,7 +537,7 @@ export default function CreateDokumentasiPage() {
                 placeholder="Contoh: Belajar Membaca, Senam Pagi, Lomba HUT RI"
                 className="w-full px-4 py-2.5 rounded-xl border border-border bg-surface-dim text-sm text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
-              <p className="text-xs text-text-muted mt-1">Nama kegiatan akan ditampilkan pada kolase</p>
+              <p className="text-xs text-text-muted mt-1">Nama kegiatan akan ditampilkan pada {isSingle ? 'foto' : 'kolase'}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -432,9 +573,23 @@ export default function CreateDokumentasiPage() {
             </div>
           </div>
 
+          {/* Preview thumbnails */}
+          <div className="bg-surface-dim rounded-xl p-3 mt-4">
+            <p className="text-xs font-medium text-text-secondary mb-2">
+              {isSingle ? 'Foto yang diupload' : `Foto yang diupload (${uploadedPaths.length})`}
+            </p>
+            <div className="flex gap-1.5 flex-wrap">
+              {uploadedPaths.map((p, i) => (
+                <div key={i} className={`rounded-lg overflow-hidden bg-border ${isSingle ? 'w-20 h-20' : 'w-12 h-12'}`}>
+                  <img src={p} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex justify-between mt-6">
             <button
-              onClick={() => setStep(2)}
+              onClick={() => setStep(isSingle ? 2 : layoutStep)}
               className="px-4 py-2.5 text-sm font-medium text-text-secondary hover:text-text transition-colors"
             >
               Kembali

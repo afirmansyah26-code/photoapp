@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tanggal, guru_id, guru_name, nama_kegiatan, deskripsi, layout, photo_paths } = body;
+    const { tanggal, guru_id, guru_name, nama_kegiatan, deskripsi, layout, upload_mode, photo_paths } = body;
 
     if (!tanggal || !guru_id || !guru_name || !nama_kegiatan) {
       return Response.json(
@@ -84,10 +84,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const mode = upload_mode === 'single' ? 'single' : 'collage';
+
+    // Single mode: only use the first photo
+    const photosToUse = mode === 'single' ? [photo_paths[0]] : photo_paths;
+
     // Insert dokumentasi
     const insertDoc = db.prepare(
-      `INSERT INTO dokumentasi (tanggal, guru_id, guru_name, nama_kegiatan, deskripsi, layout, collage_url)
-       VALUES (?, ?, ?, ?, ?, ?, '')`
+      `INSERT INTO dokumentasi (tanggal, guru_id, guru_name, nama_kegiatan, deskripsi, upload_mode, layout, collage_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, '')`
     );
 
     const result = insertDoc.run(
@@ -96,7 +101,8 @@ export async function POST(request: Request) {
       guru_name,
       nama_kegiatan,
       deskripsi || '',
-      layout || 'grid-2x2'
+      mode,
+      mode === 'single' ? 'grid-1x1' : (layout || 'grid-2x2')
     );
 
     const docId = result.lastInsertRowid as number;
@@ -112,13 +118,14 @@ export async function POST(request: Request) {
       });
     });
 
-    insertPhotos(photo_paths);
+    insertPhotos(photosToUse);
 
-    // Generate collage with text overlay
+    // Generate collage/single photo with text overlay
     const collageUrl = await generateCollage({
-      imagePaths: photo_paths,
-      layout: (layout || 'grid-2x2') as CollageLayout,
+      imagePaths: photosToUse,
+      layout: mode === 'single' ? 'grid-1x1' : ((layout || 'grid-2x2') as CollageLayout),
       documentId: docId,
+      uploadMode: mode,
       namaKegiatan: nama_kegiatan || '',
       tanggal: tanggal,
       namaSekolah: SCHOOL_NAME,

@@ -12,7 +12,7 @@ export async function POST(
 
     const dokumentasi = db
       .prepare('SELECT * FROM dokumentasi WHERE id = ?')
-      .get(id) as { id: number } | undefined;
+      .get(id) as { id: number; upload_mode?: string } | undefined;
 
     if (!dokumentasi) {
       return Response.json(
@@ -26,15 +26,17 @@ export async function POST(
       .all(id) as { foto_url: string }[];
 
     const photoPaths = fotos.map((f) => f.foto_url);
+    const uploadMode = (dokumentasi.upload_mode || 'collage') as 'single' | 'collage';
 
     const collageUrl = await generateCollage({
       imagePaths: photoPaths,
-      layout: (layout || 'grid-2x2') as CollageLayout,
+      layout: uploadMode === 'single' ? 'grid-1x1' : ((layout || 'grid-2x2') as CollageLayout),
       documentId: dokumentasi.id,
+      uploadMode,
     });
 
     db.prepare('UPDATE dokumentasi SET collage_url = ?, layout = ?, updated_at = datetime(\'now\') WHERE id = ?')
-      .run(collageUrl, layout || 'grid-2x2', id);
+      .run(collageUrl, uploadMode === 'single' ? 'grid-1x1' : (layout || 'grid-2x2'), id);
 
     return Response.json({
       success: true,

@@ -6,6 +6,8 @@ export interface User {
   created_at: string;
 }
 
+export type UploadMode = 'single' | 'collage';
+
 export interface Dokumentasi {
   id: number;
   tanggal: string;
@@ -13,6 +15,7 @@ export interface Dokumentasi {
   guru_name: string;
   nama_kegiatan: string;
   deskripsi: string;
+  upload_mode: UploadMode;
   layout: CollageLayout;
   collage_url: string;
   created_at: string;

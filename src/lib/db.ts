@@ -48,6 +48,7 @@ function getDb(): ReturnType<typeof Database> {
       guru_name TEXT NOT NULL,
       nama_kegiatan TEXT NOT NULL DEFAULT '',
       deskripsi TEXT NOT NULL DEFAULT '',
+      upload_mode TEXT NOT NULL DEFAULT 'collage' CHECK(upload_mode IN ('single', 'collage')),
       layout TEXT NOT NULL DEFAULT 'grid-2x2',
       collage_url TEXT NOT NULL DEFAULT '',
       deleted_at TEXT DEFAULT NULL,
@@ -93,6 +94,13 @@ function runMigrations(db: ReturnType<typeof Database>) {
     db.prepare("SELECT deleted_at FROM dokumentasi LIMIT 1").get();
   } catch {
     db.exec("ALTER TABLE dokumentasi ADD COLUMN deleted_at TEXT DEFAULT NULL");
+  }
+
+  // Migration: add upload_mode column if it doesn't exist
+  try {
+    db.prepare("SELECT upload_mode FROM dokumentasi LIMIT 1").get();
+  } catch {
+    db.exec("ALTER TABLE dokumentasi ADD COLUMN upload_mode TEXT NOT NULL DEFAULT 'collage'");
   }
 
   // Migration: update CHECK constraint to include 'kepsek' role

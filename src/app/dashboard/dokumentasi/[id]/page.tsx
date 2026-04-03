@@ -19,6 +19,7 @@ interface DokumentasiDetail {
   guru_name: string;
   nama_kegiatan: string;
   deskripsi: string;
+  upload_mode: string;
   layout: string;
   collage_url: string;
   fotos: Foto[];
@@ -170,7 +171,7 @@ export default function DetailDokumentasiPage() {
                 className="w-full object-contain max-h-[600px]"
               />
               <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-lg font-medium">
-                Kolase • {doc.layout}
+                {doc.upload_mode === 'single' ? '📷 1 Foto' : `🖼️ Kolase • ${doc.layout}`}
               </div>
             </div>
           )}
