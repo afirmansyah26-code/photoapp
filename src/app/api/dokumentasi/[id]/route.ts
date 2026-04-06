@@ -112,3 +112,63 @@ export async function DELETE(
     );
   }
 }
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const userId = request.headers.get('x-user-id');
+    const userRole = request.headers.get('x-user-role');
+
+    const dokumentasi = db
+      .prepare('SELECT * FROM dokumentasi WHERE id = ? AND deleted_at IS NULL')
+      .get(id) as { guru_id: number } | undefined;
+
+    if (!dokumentasi) {
+      return Response.json(
+        { success: false, error: 'Dokumentasi tidak ditemukan' },
+        { status: 404 }
+      );
+    }
+
+    // Permission check: owner or admin/superadmin/kepsek
+    if (userRole === 'guru' && String(dokumentasi.guru_id) !== userId) {
+      return Response.json(
+        { success: false, error: 'Anda hanya dapat mengedit dokumentasi milik Anda sendiri' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { nama_kegiatan, tanggal, deskripsi, video_url } = body;
+
+    db.prepare(
+      `UPDATE dokumentasi 
+       SET nama_kegiatan = ?, tanggal = ?, deskripsi = ?, video_url = ?, updated_at = datetime(?)
+       WHERE id = ?`
+    ).run(
+      nama_kegiatan ?? '',
+      tanggal ?? '',
+      deskripsi ?? '',
+      video_url ?? '',
+      new Date().toISOString(),
+      id
+    );
+
+    const updated = db.prepare('SELECT * FROM dokumentasi WHERE id = ?').get(id) as Record<string, unknown>;
+    const fotos = db.prepare('SELECT * FROM foto WHERE dokumentasi_id = ? ORDER BY sort_order').all(id);
+
+    return Response.json({
+      success: true,
+      data: { ...updated, fotos },
+    });
+  } catch (error) {
+    console.error('Update dokumentasi error:', error);
+    return Response.json(
+      { success: false, error: 'Gagal mengupdate dokumentasi: ' + (error instanceof Error ? error.message : String(error)) },
+      { status: 500 }
+    );
+  }
+}

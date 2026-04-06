@@ -38,7 +38,16 @@ export default function DetailDokumentasiPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedPhotoIdx, setSelectedPhotoIdx] = useState<number | null>(null);
 
+  // Edit state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editNamaKegiatan, setEditNamaKegiatan] = useState('');
+  const [editTanggal, setEditTanggal] = useState('');
+  const [editDeskripsi, setEditDeskripsi] = useState('');
+  const [editVideoUrl, setEditVideoUrl] = useState('');
+
   const canDelete = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'kepsek' || (user?.role === 'guru' && doc?.guru_id === user?.userId);
+  const canEdit = canDelete; // Same permission as delete
 
   useEffect(() => {
     fetchDetail();
@@ -96,6 +105,40 @@ export default function DetailDokumentasiPage() {
       toast.success('Kolase berhasil didownload');
     } catch {
       toast.error('Gagal mendownload kolase');
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editNamaKegiatan || !editTanggal) {
+      toast.error('Nama kegiatan dan tanggal harus diisi');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/dokumentasi/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nama_kegiatan: editNamaKegiatan,
+          tanggal: editTanggal,
+          deskripsi: editDeskripsi,
+          video_url: editVideoUrl,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setDoc(data.data);
+        setShowEditModal(false);
+        toast.success('Dokumentasi berhasil diupdate');
+      } else {
+        toast.error(data.error || 'Gagal mengupdate');
+      }
+    } catch {
+      toast.error('Gagal mengupdate dokumentasi');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -160,6 +203,23 @@ export default function DetailDokumentasiPage() {
               </svg>
               Download
             </button>
+            {canEdit && (
+              <button
+                onClick={() => {
+                  setEditNamaKegiatan(doc.nama_kegiatan || '');
+                  setEditTanggal(doc.tanggal || '');
+                  setEditDeskripsi(doc.deskripsi || '');
+                  setEditVideoUrl(doc.video_url || '');
+                  setShowEditModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-primary-300 text-primary-700 text-sm font-medium rounded-xl hover:bg-primary-50 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit
+              </button>
+            )}
             {canDelete && (
               <button
                 onClick={() => setShowDeleteModal(true)}
@@ -355,7 +415,7 @@ export default function DetailDokumentasiPage() {
         document.body
       )}
 
-      {/* Delete modal — rendered via portal to document.body so it's centered on full viewport */}
+      {/* Delete modal */}
       {showDeleteModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] bg-black/50 flex items-start justify-center pt-[20vh] p-4"
           style={{ margin: 0 }}
@@ -386,6 +446,97 @@ export default function DetailDokumentasiPage() {
                   {deleting ? 'Memindahkan...' : 'Ya, Pindahkan'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Edit modal */}
+      {showEditModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/50 flex items-start justify-center pt-[10vh] p-4"
+          style={{ margin: 0 }}
+          onClick={() => !saving && setShowEditModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-lg w-full animate-scale-in shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-5">
+              <div className="inline-flex items-center justify-center w-10 h-10 bg-primary-50 rounded-xl">
+                <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-text">Edit Dokumentasi</h3>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text mb-1.5">Nama Kegiatan <span className="text-danger">*</span></label>
+                <input
+                  type="text"
+                  value={editNamaKegiatan}
+                  onChange={e => setEditNamaKegiatan(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-surface-dim text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text mb-1.5">Tanggal <span className="text-danger">*</span></label>
+                <input
+                  type="date"
+                  value={editTanggal}
+                  onChange={e => setEditTanggal(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-surface-dim text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text mb-1.5">Deskripsi Kegiatan</label>
+                <textarea
+                  value={editDeskripsi}
+                  onChange={e => setEditDeskripsi(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-surface-dim text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text mb-1.5">Link Video YouTube</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <svg className="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+                      <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="white"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="url"
+                    value={editVideoUrl}
+                    onChange={e => setEditVideoUrl(e.target.value)}
+                    placeholder="https://youtube.com/watch?v=..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-surface-dim text-sm text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowEditModal(false)}
+                disabled={saving}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-text-secondary border border-border rounded-xl hover:bg-surface-dim transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving || !editNamaKegiatan || !editTanggal}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 disabled:opacity-50 transition-colors"
+              >
+                {saving ? 'Menyimpan...' : 'Simpan'}
+              </button>
             </div>
           </div>
         </div>,
