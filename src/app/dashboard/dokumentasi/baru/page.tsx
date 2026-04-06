@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
@@ -9,6 +9,12 @@ import { MAX_PHOTOS_PER_ENTRY, MAX_FILE_SIZE } from '@/lib/constants';
 import { compressImages } from '@/lib/compress-client';
 import type { CollageLayout } from '@/types';
 import type { UploadMode } from '@/types';
+
+interface GuruOption {
+  id: number;
+  name: string;
+  role: string;
+}
 
 interface PreviewFile {
   file: File;
@@ -34,6 +40,27 @@ export default function CreateDokumentasiPage() {
   const [namaKegiatan, setNamaKegiatan] = useState('');
   const [deskripsi, setDeskripsi] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+
+  // Guru selection for admin/superadmin/kepsek
+  const [guruList, setGuruList] = useState<GuruOption[]>([]);
+  const [selectedGuruId, setSelectedGuruId] = useState<number | null>(null);
+  const [selectedGuruName, setSelectedGuruName] = useState('');
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'kepsek';
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetch('/api/users')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            // Filter only guru users
+            const gurus = (data.data as GuruOption[]).filter(u => u.role === 'guru');
+            setGuruList(gurus);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isAdmin]);
 
   const isSingle = uploadMode === 'single';
   const maxFiles = isSingle ? 1 : MAX_PHOTOS_PER_ENTRY;
@@ -181,6 +208,11 @@ export default function CreateDokumentasiPage() {
       return;
     }
 
+    if (isAdmin && !selectedGuruId) {
+      toast.error('Pilih guru terlebih dahulu');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch('/api/dokumentasi', {
@@ -188,8 +220,8 @@ export default function CreateDokumentasiPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tanggal,
-          guru_id: user?.userId,
-          guru_name: user?.name,
+          guru_id: isAdmin && selectedGuruId ? selectedGuruId : user?.userId,
+          guru_name: isAdmin && selectedGuruName ? selectedGuruName : user?.name,
           nama_kegiatan: namaKegiatan,
           deskripsi,
           video_url: videoUrl,
@@ -578,13 +610,31 @@ export default function CreateDokumentasiPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text mb-1.5">Guru</label>
-                <input
-                  type="text"
-                  value={user?.name || ''}
-                  disabled
-                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-surface-dark text-sm text-text-secondary cursor-not-allowed"
-                />
+                <label className="block text-sm font-medium text-text mb-1.5">Guru {isAdmin && <span className="text-danger">*</span>}</label>
+                {isAdmin ? (
+                  <select
+                    value={selectedGuruId || ''}
+                    onChange={e => {
+                      const id = Number(e.target.value);
+                      setSelectedGuruId(id);
+                      const guru = guruList.find(g => g.id === id);
+                      setSelectedGuruName(guru?.name || '');
+                    }}
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-surface-dim text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="">-- Pilih Guru --</option>
+                    {guruList.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={user?.name || ''}
+                    disabled
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-surface-dark text-sm text-text-secondary cursor-not-allowed"
+                  />
+                )}
               </div>
             </div>
 
