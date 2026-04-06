@@ -4,8 +4,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['better-sqlite3', 'sharp'],
   poweredByHeader: false,
   experimental: {
+    proxyClientMaxBodySize: '150mb',
     serverActions: {
-      bodySizeLimit: '100mb',
+      bodySizeLimit: '150mb',
     },
   },
   async headers() {
