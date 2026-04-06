@@ -6,6 +6,7 @@ import { useDropzone } from 'react-dropzone';
 import toast from 'react-hot-toast';
 import { useUser } from '../../layout';
 import { MAX_PHOTOS_PER_ENTRY, MAX_FILE_SIZE } from '@/lib/constants';
+import { compressImages } from '@/lib/compress-client';
 import type { CollageLayout } from '@/types';
 import type { UploadMode } from '@/types';
 
@@ -22,6 +23,8 @@ export default function CreateDokumentasiPage() {
   const [uploadMode, setUploadMode] = useState<UploadMode>('collage');
   const [files, setFiles] = useState<PreviewFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
+  const [compressProgress, setCompressProgress] = useState('');
   const [uploadedPaths, setUploadedPaths] = useState<string[]>([]);
   const [layout, setLayout] = useState<CollageLayout>('grid-2x2');
   const [submitting, setSubmitting] = useState(false);
@@ -122,8 +125,29 @@ export default function CreateDokumentasiPage() {
 
     setUploading(true);
     try {
+      // Step 1: Compress images in browser
+      setCompressing(true);
+      setCompressProgress(`Mengompres foto 1/${files.length}...`);
+
+      const originalFiles = files.map(f => f.file);
+      const originalSize = originalFiles.reduce((sum, f) => sum + f.size, 0);
+
+      const compressedFiles = await compressImages(originalFiles, (current, total) => {
+        setCompressProgress(`Mengompres foto ${current}/${total}...`);
+      });
+
+      const compressedSize = compressedFiles.reduce((sum, f) => sum + f.size, 0);
+      const savedPercent = Math.round((1 - compressedSize / originalSize) * 100);
+      if (savedPercent > 0) {
+        toast.success(`Foto dikompres ${savedPercent}% lebih kecil`, { duration: 2000 });
+      }
+
+      setCompressing(false);
+      setCompressProgress('');
+
+      // Step 2: Upload compressed files
       const formData = new FormData();
-      files.forEach(f => formData.append('photos', f.file));
+      compressedFiles.forEach(f => formData.append('photos', f));
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -135,7 +159,6 @@ export default function CreateDokumentasiPage() {
         setUploadedPaths(data.data.paths);
         toast.success(`${data.data.paths.length} foto berhasil diupload`);
         if (isSingle) {
-          // Skip layout step for single mode
           setStep(3);
         } else {
           setStep(3);
@@ -147,6 +170,8 @@ export default function CreateDokumentasiPage() {
       toast.error('Gagal upload foto');
     } finally {
       setUploading(false);
+      setCompressing(false);
+      setCompressProgress('');
     }
   };
 
@@ -418,7 +443,7 @@ export default function CreateDokumentasiPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Mengupload...
+                  {compressing ? compressProgress : 'Mengupload...'}
                 </>
               ) : (
                 <>
