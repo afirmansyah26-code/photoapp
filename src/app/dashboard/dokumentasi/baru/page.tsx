@@ -45,7 +45,7 @@ export default function CreateDokumentasiPage() {
   const [guruList, setGuruList] = useState<GuruOption[]>([]);
   const [selectedGuruId, setSelectedGuruId] = useState<number | null>(null);
   const [selectedGuruName, setSelectedGuruName] = useState('');
-  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'kepsek';
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 
   useEffect(() => {
     if (isAdmin) {
