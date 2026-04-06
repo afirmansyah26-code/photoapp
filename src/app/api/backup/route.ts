@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { type NextRequest } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import db from '@/lib/db';
 
 const dbPath = process.env.DB_PATH || path.resolve(process.cwd(), 'database.sqlite');
@@ -50,12 +50,15 @@ export async function GET(request: NextRequest) {
 
     try {
       if (process.platform === 'win32') {
-        execSync(
-          `powershell -Command "Compress-Archive -Path '${backupFolder}\\*' -DestinationPath '${zipPath}' -Force"`,
-          { timeout: 120000 }
-        );
+        execFileSync('powershell', [
+          '-Command',
+          `Compress-Archive -Path '${backupFolder}\\*' -DestinationPath '${zipPath}' -Force`
+        ], { timeout: 120000 });
       } else {
-        execSync(`cd "${backupFolder}" && zip -r "${zipPath}" .`, { timeout: 120000 });
+        execFileSync('zip', ['-r', zipPath, '.'], {
+          cwd: backupFolder,
+          timeout: 120000,
+        });
       }
     } catch {
       deleteFolderRecursive(backupFolder);

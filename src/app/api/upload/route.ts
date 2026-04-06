@@ -1,8 +1,19 @@
+import { type NextRequest } from 'next/server';
 import { processUploadedFiles } from '@/lib/upload';
 import { MAX_PHOTOS_PER_ENTRY } from '@/lib/constants';
+import { safeError } from '@/lib/safe-error';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Auth check — middleware injects x-user-id for authenticated users
+    const userId = request.headers.get('x-user-id');
+    if (!userId) {
+      return Response.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const formData = await request.formData();
     const files = formData.getAll('photos') as File[];
 
@@ -29,7 +40,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Upload error:', error);
     return Response.json(
-      { success: false, error: 'Gagal mengupload foto: ' + (error instanceof Error ? error.message : String(error)) },
+      { success: false, error: safeError(error, 'Gagal mengupload foto') },
       { status: 500 }
     );
   }

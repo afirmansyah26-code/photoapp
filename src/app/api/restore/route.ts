@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { resetDb, dbPath } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const role = request.headers.get('x-user-role');
-    if (role !== 'admin' && role !== 'superadmin' && role !== 'kepsek') {
-      return Response.json({ success: false, error: 'Akses ditolak' }, { status: 403 });
+    if (role !== 'superadmin') {
+      return Response.json({ success: false, error: 'Hanya superadmin yang dapat melakukan restore' }, { status: 403 });
     }
 
     const formData = await request.formData();
@@ -39,6 +39,15 @@ export async function POST(request: Request) {
     if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
 
     if (isSqlite) {
+      // Validate SQLite magic bytes: "SQLite format 3\0"
+      if (fileBuffer.length < 16 || fileBuffer.toString('ascii', 0, 15) !== 'SQLite format 3') {
+        return Response.json({ success: false, error: 'File bukan database SQLite yang valid' }, { status: 400 });
+      }
+
+      // Backup existing DB before overwrite
+      const backupPath = dbPath + '.pre-restore.' + Date.now();
+      if (fs.existsSync(dbPath)) fs.copyFileSync(dbPath, backupPath);
+
       // Remove WAL/SHM first
       for (const ext of ['-wal', '-shm']) {
         try { if (fs.existsSync(dbPath + ext)) fs.unlinkSync(dbPath + ext); } catch { /* */ }
@@ -56,15 +65,14 @@ export async function POST(request: Request) {
 
       const extractDir = path.join(restoreDir, 'extracted');
       try {
-        // Cross-platform: use unzip on Linux, powershell on Windows
         if (process.platform === 'win32') {
-          execSync(
-            `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${extractDir}' -Force"`,
-            { timeout: 120000 }
-          );
+          execFileSync('powershell', [
+            '-Command',
+            `Expand-Archive -Path '${zipPath}' -DestinationPath '${extractDir}' -Force`
+          ], { timeout: 120000 });
         } else {
           fs.mkdirSync(extractDir, { recursive: true });
-          execSync(`unzip -o "${zipPath}" -d "${extractDir}"`, { timeout: 120000 });
+          execFileSync('unzip', ['-o', zipPath, '-d', extractDir], { timeout: 120000 });
         }
       } catch (err) {
         console.error('[Restore] Extract error:', err);
@@ -78,7 +86,17 @@ export async function POST(request: Request) {
         return Response.json({ success: false, error: 'database.sqlite tidak ditemukan di zip' }, { status: 400 });
       }
 
-      // Apply restore
+      // Backup existing DB before overwrite
+      const backupPath = dbPath + '.pre-restore.' + Date.now();
+      if (fs.existsSync(dbPath)) fs.copyFileSync(dbPath, backupPath);
+
+      // Validate SQLite
+      const dbFileBuffer = fs.readFileSync(dbFile);
+      if (dbFileBuffer.length < 16 || dbFileBuffer.toString('ascii', 0, 15) !== 'SQLite format 3') {
+        fs.rmSync(restoreDir, { recursive: true, force: true });
+        return Response.json({ success: false, error: 'database.sqlite bukan database SQLite yang valid' }, { status: 400 });
+      }
+
       for (const ext of ['-wal', '-shm']) {
         try { if (fs.existsSync(dbPath + ext)) fs.unlinkSync(dbPath + ext); } catch { /* */ }
       }

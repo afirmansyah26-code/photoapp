@@ -1,5 +1,6 @@
 import { type NextRequest } from 'next/server';
 import db from '@/lib/db';
+import { safeError } from '@/lib/safe-error';
 import fs from 'fs';
 import path from 'path';
 
@@ -167,7 +168,7 @@ export async function PUT(
   } catch (error) {
     console.error('Update dokumentasi error:', error);
     return Response.json(
-      { success: false, error: 'Gagal mengupdate dokumentasi: ' + (error instanceof Error ? error.message : String(error)) },
+      { success: false, error: safeError(error, 'Gagal mengupdate dokumentasi') },
       { status: 500 }
     );
   }

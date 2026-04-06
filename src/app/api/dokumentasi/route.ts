@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { generateCollage } from '@/lib/collage';
 import type { CollageLayout } from '@/types';
 import { SCHOOL_NAME } from '@/lib/constants';
+import { safeError } from '@/lib/safe-error';
 
 export async function GET(request: NextRequest) {
   try {
@@ -145,7 +146,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Create dokumentasi error:', error);
     return Response.json(
-      { success: false, error: 'Gagal menyimpan dokumentasi: ' + (error instanceof Error ? error.message : String(error)) },
+      { success: false, error: safeError(error, 'Gagal menyimpan dokumentasi') },
       { status: 500 }
     );
   }

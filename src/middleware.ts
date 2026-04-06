@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { COOKIE_NAME } from '@/lib/constants';
+import { checkApiRateLimit } from '@/lib/rate-limit';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -15,6 +16,21 @@ export async function middleware(request: NextRequest) {
     pathname === '/'
   ) {
     return NextResponse.next();
+  }
+
+  // API rate limiting
+  if (pathname.startsWith('/api/')) {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || request.headers.get('x-real-ip')
+      || 'unknown';
+
+    const rateCheck = checkApiRateLimit(ip);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Terlalu banyak request. Coba lagi nanti.' },
+        { status: 429 }
+      );
+    }
   }
 
   const token = request.cookies.get(COOKIE_NAME)?.value;
