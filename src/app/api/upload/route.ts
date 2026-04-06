@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Upload error:', error);
     return Response.json(
-      { success: false, error: 'Gagal mengupload foto' },
+      { success: false, error: 'Gagal mengupload foto: ' + (error instanceof Error ? error.message : String(error)) },
       { status: 500 }
     );
   }
