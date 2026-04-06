@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,14 +34,34 @@ export async function GET(
       return new Response('Not found', { status: 404 });
     }
 
+    const stat = fs.statSync(fullPath);
     const ext = path.extname(fullPath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-    const fileBuffer = fs.readFileSync(fullPath);
+    // Generate ETag from file size + mtime
+    const etag = `"${crypto.createHash('md5').update(`${stat.size}-${stat.mtimeMs}`).digest('hex')}"`;
 
-    return new Response(fileBuffer, {
+    // Check If-None-Match for conditional request
+    const ifNoneMatch = request.headers.get('if-none-match');
+    if (ifNoneMatch === etag) {
+      return new Response(null, { status: 304 });
+    }
+
+    // Stream file instead of reading entirely into memory
+    const stream = fs.createReadStream(fullPath);
+    const readableStream = new ReadableStream({
+      start(controller) {
+        stream.on('data', (chunk) => controller.enqueue(chunk));
+        stream.on('end', () => controller.close());
+        stream.on('error', (err) => controller.error(err));
+      },
+    });
+
+    return new Response(readableStream, {
       headers: {
         'Content-Type': contentType,
+        'Content-Length': stat.size.toString(),
+        'ETag': etag,
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });

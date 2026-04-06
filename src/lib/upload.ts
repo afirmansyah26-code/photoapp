@@ -3,6 +3,10 @@ import path from 'path';
 import fs from 'fs';
 import { COMPRESSED_MAX_WIDTH, COMPRESSED_QUALITY, ORIGINALS_DIR, MAX_FILE_SIZE } from './constants';
 
+// Limit sharp memory usage on low-resource servers
+sharp.concurrency(1);
+sharp.cache({ memory: 50, files: 5, items: 20 });
+
 // Validate image by checking magic bytes (file signature)
 function isValidImage(buffer: Buffer): boolean {
   if (buffer.length < 4) return false;
