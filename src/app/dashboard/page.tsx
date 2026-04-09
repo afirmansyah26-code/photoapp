@@ -29,19 +29,24 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('/api/dokumentasi?limit=6');
-      const data = await res.json();
-      if (data.success) {
-        setRecent(data.data.items);
+      // Fetch stats and recent docs in parallel
+      const [statsRes, recentRes] = await Promise.all([
+        fetch('/api/stats'),
+        fetch('/api/dokumentasi?limit=6'),
+      ]);
+
+      const statsData = await statsRes.json();
+      if (statsData.success) {
         setStats({
-          totalDokumentasi: data.data.total,
-          totalFoto: data.data.items.reduce((sum: number, d: RecentDoc) => sum + (d.foto_count || 0), 0),
-          bulanIni: data.data.items.filter((d: RecentDoc) => {
-            const docDate = new Date(d.tanggal);
-            const now = new Date();
-            return docDate.getMonth() === now.getMonth() && docDate.getFullYear() === now.getFullYear();
-          }).length,
+          totalDokumentasi: statsData.data.totalDokumentasi,
+          totalFoto: statsData.data.totalFoto,
+          bulanIni: statsData.data.bulanIni,
         });
+      }
+
+      const recentData = await recentRes.json();
+      if (recentData.success) {
+        setRecent(recentData.data.items);
       }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
