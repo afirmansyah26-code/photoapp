@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -10,6 +10,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [appName, setAppName] = useState('Kolase Pembelajaran');
+  const [schoolName, setSchoolName] = useState('');
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          if (data.data.app_name) setAppName(data.data.app_name);
+          if (data.data.school_name) setSchoolName(data.data.school_name);
+        }
+      })
+      .catch(() => {/* ignore */});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +75,8 @@ export default function LoginPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-text">Kolase Pembelajaran</h1>
-            <p className="text-text-secondary mt-1 text-sm">SLB BCD Nusantara</p>
+            <h1 className="text-2xl font-bold text-text">{appName}</h1>
+            <p className="text-text-secondary mt-1 text-sm">{schoolName}</p>
           </div>
 
           {/* Form */}
@@ -138,7 +152,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-white/50 text-xs mt-6">
-          © 2024 SLB BCD Nusantara
+          © {new Date().getFullYear()} {schoolName || 'Kolase'}
         </p>
       </div>
     </div>

@@ -1,11 +1,28 @@
 import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
+import db from "@/lib/db";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Kolase Pembelajaran - SLB BCD Nusantara",
-  description: "Aplikasi dokumentasi pembelajaran berbasis foto kolase untuk SLB BCD Nusantara",
-};
+function getSettings() {
+  try {
+    const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
+    const map: Record<string, string> = {};
+    for (const r of rows) map[r.key] = r.value;
+    return map;
+  } catch {
+    return {};
+  }
+}
+
+export function generateMetadata(): Metadata {
+  const s = getSettings();
+  const appName = s.app_name || 'Kolase Pembelajaran';
+  const schoolName = s.school_name || '';
+  return {
+    title: schoolName ? `${appName} - ${schoolName}` : appName,
+    description: `Aplikasi dokumentasi pembelajaran berbasis foto kolase${schoolName ? ` untuk ${schoolName}` : ''}`,
+  };
+}
 
 export default function RootLayout({
   children,

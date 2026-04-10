@@ -69,6 +69,11 @@ function getDb(): ReturnType<typeof Database> {
     CREATE INDEX IF NOT EXISTS idx_dokumentasi_tanggal ON dokumentasi(tanggal);
     CREATE INDEX IF NOT EXISTS idx_dokumentasi_guru_id ON dokumentasi(guru_id);
     CREATE INDEX IF NOT EXISTS idx_foto_dokumentasi_id ON foto(dokumentasi_id);
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT ''
+    );
   `);
 
   // Run migrations only once
@@ -138,6 +143,11 @@ function runMigrations(db: ReturnType<typeof Database>) {
 }
 
 function runStartupTasks(db: ReturnType<typeof Database>) {
+  // Seed default settings
+  const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
+  insertSetting.run('app_name', 'Kolase Pembelajaran');
+  insertSetting.run('school_name', 'SLB BCD Nusantara');
+
   // Auto-cleanup items in trash older than 30 days
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();

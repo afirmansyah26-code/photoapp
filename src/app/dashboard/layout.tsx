@@ -10,10 +10,19 @@ import type { JWTPayload } from '@/types';
 const UserContext = createContext<JWTPayload | null>(null);
 export const useUser = () => useContext(UserContext);
 
+interface AppSettings {
+  app_name: string;
+  school_name: string;
+}
+
+const SettingsContext = createContext<AppSettings>({ app_name: 'Kolase', school_name: '' });
+export const useSettings = () => useContext(SettingsContext);
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<JWTPayload | null>(null);
+  const [settings, setSettings] = useState<AppSettings>({ app_name: 'Kolase', school_name: '' });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -22,13 +31,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setUser(data.data);
+    Promise.all([
+      fetch('/api/auth/me').then(r => r.json()),
+      fetch('/api/settings').then(r => r.json()),
+    ])
+      .then(([authData, settingsData]) => {
+        if (authData.success) {
+          setUser(authData.data);
         } else {
           router.push('/login');
+        }
+        if (settingsData.success) {
+          setSettings(settingsData.data);
         }
       })
       .catch(() => router.push('/login'))
@@ -148,6 +162,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <SettingsContext.Provider value={settings}>
     <UserContext.Provider value={user}>
       <div className="min-h-screen bg-surface-dim flex">
         {/* Mobile overlay */}
@@ -173,8 +188,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </svg>
               </div>
               <div>
-                <h2 className="font-bold text-text text-sm leading-tight">Kolase</h2>
-                <p className="text-xs text-text-muted">SLB Nusantara</p>
+                <h2 className="font-bold text-text text-sm leading-tight">{settings.app_name?.split(' ')[0] || 'Kolase'}</h2>
+                <p className="text-xs text-text-muted">{settings.school_name || ''}</p>
               </div>
             </div>
           </div>
@@ -299,5 +314,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         document.body
       )}
     </UserContext.Provider>
+    </SettingsContext.Provider>
   );
 }

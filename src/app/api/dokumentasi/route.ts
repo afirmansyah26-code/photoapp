@@ -2,7 +2,6 @@ import { type NextRequest } from 'next/server';
 import db from '@/lib/db';
 import { generateCollage } from '@/lib/collage';
 import type { CollageLayout } from '@/types';
-import { SCHOOL_NAME } from '@/lib/constants';
 import { safeError } from '@/lib/safe-error';
 
 export async function GET(request: NextRequest) {
@@ -130,7 +129,7 @@ export async function POST(request: Request) {
       uploadMode: mode,
       namaKegiatan: nama_kegiatan || '',
       tanggal: tanggal,
-      namaSekolah: SCHOOL_NAME,
+      namaSekolah: ((db.prepare("SELECT value FROM settings WHERE key = 'school_name'").get() as { value: string } | undefined)?.value) || 'Sekolah',
     });
 
     // Update collage URL
