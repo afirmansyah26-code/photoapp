@@ -12,6 +12,7 @@ interface CollageOptions {
   namaKegiatan?: string;
   tanggal?: string;
   namaSekolah?: string;
+  logoPath?: string;
 }
 
 const HEADER_HEIGHT = 160;
@@ -138,9 +139,17 @@ function createEducationBackground(width: number, height: number): Buffer {
   return Buffer.from(svg);
 }
 
-function createHeaderSvg(width: number, namaKegiatan: string, tanggal: string, namaSekolah: string): Buffer {
+function createHeaderSvg(width: number, namaKegiatan: string, tanggal: string, namaSekolah: string, logoBase64?: string): Buffer {
   const formattedDate = formatTanggalIndo(tanggal);
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  const hasLogo = !!logoBase64;
+  const logoSize = 90;
+  const textOffsetX = hasLogo ? (width + logoSize + 20) / 2 : width / 2;
+
+  const logoSvg = hasLogo
+    ? `<image x="30" y="${(HEADER_HEIGHT - logoSize) / 2}" width="${logoSize}" height="${logoSize}" href="data:image/png;base64,${logoBase64}" preserveAspectRatio="xMidYMid meet" />`
+    : '';
 
   const svg = `
     <svg width="${width}" height="${HEADER_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
@@ -151,10 +160,11 @@ function createHeaderSvg(width: number, namaKegiatan: string, tanggal: string, n
         .sekolah { fill: #4a5568; font-size: 22px; }
         .tanggal { fill: #718096; font-size: 20px; }
       </style>
-      <text x="${width / 2}" y="35" text-anchor="middle" class="title kegiatan">KEGIATAN</text>
-      <text x="${width / 2}" y="72" text-anchor="middle" class="title nama">${esc(namaKegiatan.toUpperCase())}</text>
-      <text x="${width / 2}" y="108" text-anchor="middle" class="title sekolah">${esc(namaSekolah.toUpperCase())}</text>
-      <text x="${width / 2}" y="140" text-anchor="middle" class="title tanggal">${esc(formattedDate.toUpperCase())}</text>
+      ${logoSvg}
+      <text x="${textOffsetX}" y="35" text-anchor="middle" class="title kegiatan">KEGIATAN</text>
+      <text x="${textOffsetX}" y="72" text-anchor="middle" class="title nama">${esc(namaKegiatan.toUpperCase())}</text>
+      <text x="${textOffsetX}" y="108" text-anchor="middle" class="title sekolah">${esc(namaSekolah.toUpperCase())}</text>
+      <text x="${textOffsetX}" y="140" text-anchor="middle" class="title tanggal">${esc(formattedDate.toUpperCase())}</text>
     </svg>
   `;
 
@@ -186,7 +196,7 @@ async function resizeWithBorder(buf: Buffer, width: number, height: number): Pro
 }
 
 export async function generateCollage(options: CollageOptions): Promise<string> {
-  const { imagePaths, layout, documentId, uploadMode, namaKegiatan, tanggal, namaSekolah } = options;
+  const { imagePaths, layout, documentId, uploadMode, namaKegiatan, tanggal, namaSekolah, logoPath } = options;
 
   const collagesPath = path.join(process.cwd(), 'public', COLLAGES_DIR);
   if (!fs.existsSync(collagesPath)) {
@@ -205,6 +215,17 @@ export async function generateCollage(options: CollageOptions): Promise<string> 
 
   const hasHeader = !!(namaKegiatan && tanggal && namaSekolah);
   const headerOffset = hasHeader ? HEADER_HEIGHT : 0;
+
+  // Read logo as base64 for header embedding
+  let logoBase64: string | undefined;
+  if (hasHeader && logoPath) {
+    try {
+      const fullLogoPath = path.join(process.cwd(), 'public', logoPath);
+      if (fs.existsSync(fullLogoPath)) {
+        logoBase64 = fs.readFileSync(fullLogoPath).toString('base64');
+      }
+    } catch { /* logo not found, skip */ }
+  }
 
   // ── Single photo mode: height follows the photo's aspect ratio ──
   if (uploadMode === 'single' && imageBuffers.length > 0) {
@@ -250,7 +271,7 @@ export async function generateCollage(options: CollageOptions): Promise<string> 
     ];
 
     if (hasHeader) {
-      const headerSvg = createHeaderSvg(canvasWidth, namaKegiatan!, tanggal!, namaSekolah!);
+      const headerSvg = createHeaderSvg(canvasWidth, namaKegiatan!, tanggal!, namaSekolah!, logoBase64);
       composites.push({ input: headerSvg, top: 0, left: 0 });
     }
 
@@ -351,7 +372,7 @@ export async function generateCollage(options: CollageOptions): Promise<string> 
   ];
 
   if (hasHeader) {
-    const headerSvg = createHeaderSvg(canvasWidth, namaKegiatan!, tanggal!, namaSekolah!);
+    const headerSvg = createHeaderSvg(canvasWidth, namaKegiatan!, tanggal!, namaSekolah!, logoBase64);
     // Insert header after bg but before photos
     allComposites.splice(1, 0, {
       input: headerSvg,

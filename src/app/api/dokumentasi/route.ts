@@ -130,6 +130,7 @@ export async function POST(request: Request) {
       namaKegiatan: nama_kegiatan || '',
       tanggal: tanggal,
       namaSekolah: ((db.prepare("SELECT value FROM settings WHERE key = 'school_name'").get() as { value: string } | undefined)?.value) || 'Sekolah',
+      logoPath: ((db.prepare("SELECT value FROM settings WHERE key = 'logo_url'").get() as { value: string } | undefined)?.value) || undefined,
     });
 
     // Update collage URL

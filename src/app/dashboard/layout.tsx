@@ -13,16 +13,17 @@ export const useUser = () => useContext(UserContext);
 interface AppSettings {
   app_name: string;
   school_name: string;
+  logo_url: string;
 }
 
-const SettingsContext = createContext<AppSettings>({ app_name: 'Kolase', school_name: '' });
+const SettingsContext = createContext<AppSettings>({ app_name: 'Kolase', school_name: '', logo_url: '' });
 export const useSettings = () => useContext(SettingsContext);
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<JWTPayload | null>(null);
-  const [settings, setSettings] = useState<AppSettings>({ app_name: 'Kolase', school_name: '' });
+  const [settings, setSettings] = useState<AppSettings>({ app_name: 'Kolase', school_name: '', logo_url: '' });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -182,11 +183,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Logo */}
           <div className="p-5 border-b border-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center shadow-md shadow-primary-500/20">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
+              {settings.logo_url ? (
+                <img src={settings.logo_url} alt="Logo" className="w-10 h-10 rounded-xl object-contain" />
+              ) : (
+                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center shadow-md shadow-primary-500/20">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
               <div>
                 <h2 className="font-bold text-text text-sm leading-tight">{settings.app_name?.split(' ')[0] || 'Kolase'}</h2>
                 <p className="text-xs text-text-muted">{settings.school_name || ''}</p>
