@@ -35,7 +35,7 @@ export interface DokumentasiWithFotos extends Dokumentasi {
   fotos: Foto[];
 }
 
-export type CollageLayout = 'grid-1x1' | 'grid-2x2' | 'grid-3x3' | 'grid-3x4' | 'horizontal' | 'vertical';
+export type CollageLayout = 'grid-1x1' | 'grid-2x2' | 'grid-3x3' | 'grid-3x4' | 'grid-1x3x3' | 'grid-1x3x3x3' | 'horizontal' | 'vertical';
 
 export interface JWTPayload {
   userId: number;

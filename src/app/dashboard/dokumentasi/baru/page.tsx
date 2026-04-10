@@ -260,7 +260,9 @@ export default function CreateDokumentasiPage() {
 
   const layouts: { value: CollageLayout; label: string; desc: string }[] = [
     { value: 'grid-2x2', label: 'Grid 2×2', desc: 'Cocok untuk 2-4 foto' },
+    { value: 'grid-1x3x3', label: '1 Besar + 3×2', desc: 'Cocok untuk 7 foto' },
     { value: 'grid-3x3', label: 'Grid 3×3', desc: 'Cocok untuk 5-9 foto' },
+    { value: 'grid-1x3x3x3', label: '1 Besar + 3×3', desc: 'Cocok untuk 10 foto' },
     { value: 'grid-3x4', label: 'Grid 3×4', desc: 'Cocok untuk 10-12 foto' },
     { value: 'horizontal', label: 'Horizontal', desc: 'Foto berjajar horizontal' },
     { value: 'vertical', label: 'Vertikal', desc: 'Foto berjajar vertikal' },

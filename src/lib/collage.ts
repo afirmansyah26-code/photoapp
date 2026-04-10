@@ -293,6 +293,12 @@ export async function generateCollage(options: CollageOptions): Promise<string> 
     case 'grid-3x4':
       photoComposites = await createGridComposites(imageBuffers, 3, 4, headerOffset);
       break;
+    case 'grid-1x3x3':
+      photoComposites = await createHeroGridComposites(imageBuffers, 3, 2, headerOffset);
+      break;
+    case 'grid-1x3x3x3':
+      photoComposites = await createHeroGridComposites(imageBuffers, 3, 3, headerOffset);
+      break;
     case 'horizontal':
       photoComposites = await createHorizontalComposites(imageBuffers, headerOffset);
       break;
@@ -318,6 +324,12 @@ export async function generateCollage(options: CollageOptions): Promise<string> 
   } else if (layout === 'grid-3x4') {
     // Taller canvas for 3x4 grid
     canvasHeight = Math.round(COLLAGE_SIZE * 1.33) + headerOffset;
+  } else if (layout === 'grid-1x3x3') {
+    // 1 hero + 2 rows of 3: ratio ~1.25
+    canvasHeight = Math.round(COLLAGE_SIZE * 1.25) + headerOffset;
+  } else if (layout === 'grid-1x3x3x3') {
+    // 1 hero + 3 rows of 3: ratio ~1.6
+    canvasHeight = Math.round(COLLAGE_SIZE * 1.6) + headerOffset;
   } else if (layout === 'horizontal') {
     const gap = COLLAGE_GAP;
     canvasHeight = 400 + gap * 2 + headerOffset;
@@ -449,4 +461,59 @@ async function createVerticalComposites(
     left: gap,
     top: topOffset + gap + index * (cellHeight + gap),
   }));
+}
+
+/**
+ * Create hero grid composites: 1 large photo spanning full width on top,
+ * remaining photos in rows of `cols` below.
+ * Used for grid-1x3x3 (7 photos) and grid-1x3x3x3 (10 photos).
+ */
+async function createHeroGridComposites(
+  imageBuffers: Buffer[],
+  cols: number,
+  gridRows: number,
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const totalWidth = COLLAGE_SIZE;
+  const totalRows = gridRows + 1; // 1 hero row + grid rows
+  const heightRatio = totalRows === 3 ? 1.25 : 1.6;
+  const totalHeight = Math.round(COLLAGE_SIZE * heightRatio);
+
+  // Hero photo: full width, taller
+  const heroWidth = totalWidth - gap * 2;
+  const heroHeight = Math.floor((totalHeight - gap * (totalRows + 1)) * 0.4);
+
+  // Grid cells below hero
+  const remainingHeight = totalHeight - heroHeight - gap * (totalRows + 1);
+  const cellWidth = Math.floor((totalWidth - gap * (cols + 1)) / cols);
+  const cellHeight = Math.floor(remainingHeight / gridRows) - gap;
+
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  // Hero (first photo)
+  const heroResized = await resizeWithBorder(imageBuffers[0], heroWidth, heroHeight);
+  composites.push({
+    input: heroResized,
+    left: gap,
+    top: topOffset + gap,
+  });
+
+  // Grid photos (remaining)
+  const gridPhotos = imageBuffers.slice(1, 1 + cols * gridRows);
+  const gridResized = await Promise.all(
+    gridPhotos.map((buf) => resizeWithBorder(buf, cellWidth, cellHeight))
+  );
+
+  gridResized.forEach((buf, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    composites.push({
+      input: buf,
+      left: gap + col * (cellWidth + gap),
+      top: topOffset + gap + heroHeight + gap + row * (cellHeight + gap),
+    });
+  });
+
+  return composites;
 }
