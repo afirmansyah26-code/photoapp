@@ -34,6 +34,8 @@ export default function CreateDokumentasiPage() {
   const [uploadedPaths, setUploadedPaths] = useState<string[]>([]);
   const [layout, setLayout] = useState<CollageLayout>('grid-2x2');
   const [submitting, setSubmitting] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   // Form fields
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
@@ -116,6 +118,40 @@ export default function CreateDokumentasiPage() {
       updated.splice(index, 1);
       return updated;
     });
+  };
+
+  // Drag & drop reorder handlers
+  const handleDragStart = (index: number) => {
+    setDragIdx(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (dragIdx !== null && dragIdx !== index) {
+      setDragOverIdx(index);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === dropIndex) {
+      setDragIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    setFiles(prev => {
+      const updated = [...prev];
+      const [dragged] = updated.splice(dragIdx, 1);
+      updated.splice(dropIndex, 0, dragged);
+      return updated;
+    });
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragIdx(null);
+    setDragOverIdx(null);
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -428,18 +464,42 @@ export default function CreateDokumentasiPage() {
             </div>
           )}
 
-          {/* Preview */}
+          {/* Preview with drag & drop reorder */}
           {files.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm font-medium text-text mb-2">{files.length} foto dipilih</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-text">{files.length} foto dipilih</p>
+                {!isSingle && files.length > 1 && (
+                  <p className="text-xs text-text-muted flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                    Seret untuk mengatur urutan
+                  </p>
+                )}
+              </div>
               <div className={`grid gap-2 ${
                 isSingle ? 'grid-cols-1 max-w-sm' : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5'
               }`}>
                 {files.map((f, i) => (
-                  <div key={i} className={`relative group overflow-hidden bg-surface-dim rounded-xl ${
-                    isSingle ? 'aspect-auto max-h-64' : 'aspect-square'
-                  }`}>
-                    <img src={f.preview} alt={`Preview ${i + 1}`} className={`w-full h-full ${isSingle ? 'object-contain' : 'object-cover'}`} />
+                  <div
+                    key={f.preview}
+                    draggable={!isSingle && files.length > 1}
+                    onDragStart={() => handleDragStart(i)}
+                    onDragOver={(e) => handleDragOver(e, i)}
+                    onDrop={(e) => handleDrop(e, i)}
+                    onDragEnd={handleDragEnd}
+                    className={`relative group overflow-hidden bg-surface-dim rounded-xl transition-all duration-200 ${
+                      isSingle ? 'aspect-auto max-h-64' : 'aspect-square'
+                    } ${
+                      !isSingle && files.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''
+                    } ${
+                      dragIdx === i ? 'opacity-40 scale-95 ring-2 ring-primary-400' : ''
+                    } ${
+                      dragOverIdx === i && dragIdx !== i ? 'ring-2 ring-primary-500 ring-offset-2 scale-105' : ''
+                    }`}
+                  >
+                    <img src={f.preview} alt={`Preview ${i + 1}`} className={`w-full h-full ${isSingle ? 'object-contain' : 'object-cover'} pointer-events-none`} />
                     <button
                       onClick={(e) => { e.stopPropagation(); removeFile(i); }}
                       className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
@@ -451,6 +511,13 @@ export default function CreateDokumentasiPage() {
                     {!isSingle && (
                       <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
                         {i + 1}
+                      </div>
+                    )}
+                    {!isSingle && files.length > 1 && (
+                      <div className="absolute top-1 left-1 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg className="w-4 h-4 drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" />
+                        </svg>
                       </div>
                     )}
                   </div>
