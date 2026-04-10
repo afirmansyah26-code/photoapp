@@ -144,7 +144,7 @@ function createHeaderSvg(width: number, namaKegiatan: string, tanggal: string, n
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const hasLogo = !!logoBase64;
-  const logoSize = 90;
+  const logoSize = 120;
   const textOffsetX = hasLogo ? (width + logoSize + 20) / 2 : width / 2;
 
   const logoSvg = hasLogo
