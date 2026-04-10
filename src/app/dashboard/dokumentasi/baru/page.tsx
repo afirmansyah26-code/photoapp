@@ -510,29 +510,59 @@ export default function CreateDokumentasiPage() {
               >
                 <div className="mb-2">
                   {l.value === 'grid-2x2' && (
-                    <div className="grid grid-cols-2 gap-1 w-12 h-12">
-                      {[1,2,3,4].map(i => <div key={i} className={`rounded ${layout === l.value ? 'bg-primary-400' : 'bg-border-dark'}`} />)}
-                    </div>
+                    <svg width="48" height="48" viewBox="0 0 48 48" className="rounded">
+                      <rect x="2" y="2" width="20" height="20" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="26" y="2" width="20" height="20" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="26" width="20" height="20" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="26" y="26" width="20" height="20" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
+                  )}
+                  {l.value === 'grid-1x3x3' && (
+                    <svg width="48" height="56" viewBox="0 0 48 56" className="rounded">
+                      <rect x="2" y="2" width="44" height="16" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="2" y="22" width="13" height="13" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="22" width="13" height="13" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="22" width="13" height="13" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="38" width="13" height="13" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="38" width="13" height="13" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="38" width="13" height="13" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
                   )}
                   {l.value === 'grid-3x3' && (
-                    <div className="grid grid-cols-3 gap-0.5 w-12 h-12">
-                      {[1,2,3,4,5,6,7,8,9].map(i => <div key={i} className={`rounded-sm ${layout === l.value ? 'bg-primary-400' : 'bg-border-dark'}`} />)}
-                    </div>
+                    <svg width="48" height="48" viewBox="0 0 48 48" className="rounded">
+                      {[0,1,2].map(r => [0,1,2].map(c => (
+                        <rect key={`${r}-${c}`} x={2 + c * 16} y={2 + r * 16} width="12" height="12" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      )))}
+                    </svg>
+                  )}
+                  {l.value === 'grid-1x3x3x3' && (
+                    <svg width="48" height="68" viewBox="0 0 48 68" className="rounded">
+                      <rect x="2" y="2" width="44" height="14" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      {[0,1,2].map(r => [0,1,2].map(c => (
+                        <rect key={`${r}-${c}`} x={2 + c * 16} y={20 + r * 17} width="12" height="13" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      )))}
+                    </svg>
                   )}
                   {l.value === 'grid-3x4' && (
-                    <div className="grid grid-cols-3 gap-0.5 w-12 h-16">
-                      {[1,2,3,4,5,6,7,8,9,10,11,12].map(i => <div key={i} className={`rounded-sm ${layout === l.value ? 'bg-primary-400' : 'bg-border-dark'}`} />)}
-                    </div>
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      {[0,1,2,3].map(r => [0,1,2].map(c => (
+                        <rect key={`${r}-${c}`} x={2 + c * 16} y={2 + r * 16} width="12" height="12" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      )))}
+                    </svg>
                   )}
                   {l.value === 'horizontal' && (
-                    <div className="flex gap-1 w-12 h-8">
-                      {[1,2,3].map(i => <div key={i} className={`flex-1 rounded ${layout === l.value ? 'bg-primary-400' : 'bg-border-dark'}`} />)}
-                    </div>
+                    <svg width="48" height="28" viewBox="0 0 48 28" className="rounded">
+                      <rect x="2" y="2" width="12" height="24" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="2" width="12" height="24" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="2" width="12" height="24" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
                   )}
                   {l.value === 'vertical' && (
-                    <div className="flex flex-col gap-1 w-8 h-12">
-                      {[1,2,3].map(i => <div key={i} className={`flex-1 rounded ${layout === l.value ? 'bg-primary-400' : 'bg-border-dark'}`} />)}
-                    </div>
+                    <svg width="28" height="48" viewBox="0 0 28 48" className="rounded">
+                      <rect x="2" y="2" width="24" height="12" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="18" width="24" height="12" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="34" width="24" height="12" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
                   )}
                 </div>
                 <p className="text-sm font-semibold text-text">{l.label}</p>
