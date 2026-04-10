@@ -3,6 +3,8 @@ import { Toaster } from "react-hot-toast";
 import db from "@/lib/db";
 import "./globals.css";
 
+export const dynamic = 'force-dynamic';
+
 function getSettings() {
   try {
     const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
