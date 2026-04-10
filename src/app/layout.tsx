@@ -20,9 +20,14 @@ export function generateMetadata(): Metadata {
   const s = getSettings();
   const appName = s.app_name || 'Kolase Pembelajaran';
   const schoolName = s.school_name || '';
+  const faviconUrl = s.favicon_url || s.logo_url || '/favicon.ico';
   return {
     title: schoolName ? `${appName} - ${schoolName}` : appName,
     description: `Aplikasi dokumentasi pembelajaran berbasis foto kolase${schoolName ? ` untuk ${schoolName}` : ''}`,
+    icons: {
+      icon: faviconUrl,
+      apple: s.logo_url || '/favicon.ico',
+    },
   };
 }
 

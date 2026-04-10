@@ -95,9 +95,19 @@ export async function POST(request: NextRequest) {
 
     const logoUrl = `/uploads/${logoFilename}`;
 
+    // Generate favicon (32x32)
+    const faviconFilename = `favicon-${Date.now()}.png`;
+    await sharp(buffer)
+      .resize(32, 32, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
+      .png()
+      .toFile(path.join(uploadsDir, faviconFilename));
+
+    const faviconUrl = `/uploads/${faviconFilename}`;
+
     // Save to settings
     const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?');
     upsert.run('logo_url', logoUrl, logoUrl);
+    upsert.run('favicon_url', faviconUrl, faviconUrl);
 
     return Response.json({ success: true, data: { logo_url: logoUrl } });
   } catch (error) {
