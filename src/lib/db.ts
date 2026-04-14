@@ -48,6 +48,7 @@ function getDb(): ReturnType<typeof Database> {
       guru_name TEXT NOT NULL,
       nama_kegiatan TEXT NOT NULL DEFAULT '',
       deskripsi TEXT NOT NULL DEFAULT '',
+      video_url TEXT NOT NULL DEFAULT '',
       upload_mode TEXT NOT NULL DEFAULT 'collage' CHECK(upload_mode IN ('single', 'collage')),
       layout TEXT NOT NULL DEFAULT 'grid-2x2',
       collage_url TEXT NOT NULL DEFAULT '',
