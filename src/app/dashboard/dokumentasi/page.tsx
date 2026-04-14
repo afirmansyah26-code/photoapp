@@ -296,10 +296,10 @@ export default function GalleryPage() {
                     )}
                     <div className="absolute top-2 right-2 flex items-center gap-1.5">
                       {doc.video_url && (
-                        <div className="bg-red-600/90 backdrop-blur-sm text-white text-xs px-1.5 py-1 rounded-lg flex items-center gap-1" title="Ada Video">
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
-                            <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="white"/>
+                        <div className="drop-shadow-lg" title="Ada Video YouTube">
+                          <svg className="w-7 h-5" viewBox="0 0 68 48" fill="none">
+                            <path d="M66.52 7.74c-.78-2.93-3.08-5.24-6-6.02C55.22 0 34 0 34 0S12.78 0 7.48 1.72c-2.92.78-5.22 3.09-6 6.02C0 13.08 0 24 0 24s0 10.92 1.48 16.26c.78 2.93 3.08 5.24 6 6.02C12.78 48 34 48 34 48s21.22 0 26.52-1.72c2.92-.78 5.22-3.09 6-6.02C68 34.92 68 24 68 24s0-10.92-1.48-16.26z" fill="#FF0000"/>
+                            <path d="M27.2 34.29l17.6-10.3L27.2 13.7v20.58z" fill="white"/>
                           </svg>
                         </div>
                       )}
