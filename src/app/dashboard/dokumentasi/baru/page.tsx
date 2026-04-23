@@ -65,14 +65,26 @@ export default function CreateDokumentasiPage() {
   }, [isAdmin]);
 
   const isSingle = uploadMode === 'single';
-  const maxFiles = isSingle ? 1 : MAX_PHOTOS_PER_ENTRY;
 
-  // Total steps: single=3 (mode→upload→data), collage=4 (mode→upload→layout→data)
+  // Layout max photo capacity
+  const layoutMaxPhotos: Record<string, number> = {
+    'grid-2x2': 4,
+    'grid-1x3x3': 7,
+    'grid-3x3': 9,
+    'grid-1x3x3x3': 10,
+    'grid-3x4': 12,
+    'horizontal': 12,
+    'vertical': 12,
+  };
+
+  const maxFiles = isSingle ? 1 : (layoutMaxPhotos[layout] || MAX_PHOTOS_PER_ENTRY);
+
+  // Total steps: single=3 (mode→upload→data), collage=4 (mode→layout→upload→data)
   const totalSteps = isSingle ? 3 : 4;
 
   const stepLabels = isSingle
     ? ['Pilih Mode', 'Upload Foto', 'Isi Data']
-    : ['Pilih Mode', 'Upload Foto', 'Pilih Layout', 'Isi Data'];
+    : ['Pilih Mode', 'Pilih Layout', 'Upload Foto', 'Isi Data'];
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -100,7 +112,9 @@ export default function CreateDokumentasiPage() {
       );
     }
 
-    const remaining = maxFiles - files.length;
+    // For single mode, cap at 1. For collage, allow up to absolute max (warning will show if exceeds layout)
+    const absMax = isSingle ? 1 : MAX_PHOTOS_PER_ENTRY;
+    const remaining = absMax - files.length;
     const newFiles = validFiles.slice(0, remaining).map(file => ({
       file,
       preview: URL.createObjectURL(file),
@@ -109,7 +123,7 @@ export default function CreateDokumentasiPage() {
     if (newFiles.length > 0) {
       setFiles(prev => [...prev, ...newFiles]);
     }
-  }, [files.length, maxFiles]);
+  }, [files.length, isSingle]);
 
   const removeFile = (index: number) => {
     setFiles(prev => {
@@ -157,7 +171,7 @@ export default function CreateDokumentasiPage() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.webp'] },
-    maxFiles: maxFiles,
+    maxFiles: isSingle ? 1 : MAX_PHOTOS_PER_ENTRY,
     maxSize: MAX_FILE_SIZE,
     multiple: !isSingle,
     onDropRejected: (fileRejections) => {
@@ -221,11 +235,7 @@ export default function CreateDokumentasiPage() {
       if (data.success) {
         setUploadedPaths(data.data.paths);
         toast.success(`${data.data.paths.length} foto berhasil diupload`);
-        if (isSingle) {
-          setStep(3);
-        } else {
-          setStep(3);
-        }
+        setStep(dataStep);
       } else {
         toast.error(data.error || 'Gagal upload foto');
       }
@@ -290,18 +300,20 @@ export default function CreateDokumentasiPage() {
     setStep(2);
   };
 
-  // For collage mode: which step is the data step?
+  // For collage mode: layout=step2, upload=step3, data=step4
+  // For single mode: upload=step2, data=step3
   const dataStep = isSingle ? 3 : 4;
-  const layoutStep = isSingle ? -1 : 3; // -1 means no layout step
+  const layoutStep = isSingle ? -1 : 2; // collage: layout is step 2
+  const uploadStep = isSingle ? 2 : 3;  // collage: upload is step 3
 
-  const layouts: { value: CollageLayout; label: string; desc: string }[] = [
-    { value: 'grid-2x2', label: 'Grid 2×2', desc: 'Cocok untuk 2-4 foto' },
-    { value: 'grid-1x3x3', label: '1 Besar + 3×2', desc: 'Cocok untuk 7 foto' },
-    { value: 'grid-3x3', label: 'Grid 3×3', desc: 'Cocok untuk 5-9 foto' },
-    { value: 'grid-1x3x3x3', label: '1 Besar + 3×3', desc: 'Cocok untuk 10 foto' },
-    { value: 'grid-3x4', label: 'Grid 3×4', desc: 'Cocok untuk 10-12 foto' },
-    { value: 'horizontal', label: 'Horizontal', desc: 'Foto berjajar horizontal' },
-    { value: 'vertical', label: 'Vertikal', desc: 'Foto berjajar vertikal' },
+  const layouts: { value: CollageLayout; label: string; desc: string; max: number }[] = [
+    { value: 'grid-2x2', label: 'Grid 2×2', desc: 'Maks 4 foto', max: 4 },
+    { value: 'grid-1x3x3', label: '1 Besar + 3×2', desc: 'Maks 7 foto', max: 7 },
+    { value: 'grid-3x3', label: 'Grid 3×3', desc: 'Maks 9 foto', max: 9 },
+    { value: 'grid-1x3x3x3', label: '1 Besar + 3×3', desc: 'Maks 10 foto', max: 10 },
+    { value: 'grid-3x4', label: 'Grid 3×4', desc: 'Maks 12 foto', max: 12 },
+    { value: 'horizontal', label: 'Horizontal', desc: 'Maks 12 foto', max: 12 },
+    { value: 'vertical', label: 'Vertikal', desc: 'Maks 12 foto', max: 12 },
   ];
 
   return (
@@ -311,12 +323,7 @@ export default function CreateDokumentasiPage() {
         <button
           onClick={() => {
             if (step > 1) {
-              // Go back to previous step
-              if (step === dataStep) {
-                setStep(isSingle ? 2 : layoutStep);
-              } else {
-                setStep(step - 1);
-              }
+              setStep(step - 1);
             } else {
               router.back();
             }
@@ -417,8 +424,8 @@ export default function CreateDokumentasiPage() {
         </div>
       )}
 
-      {/* Step 2: Upload Photos */}
-      {step === 2 && (
+      {/* Upload Photos step */}
+      {step === uploadStep && (
         <div className="bg-white rounded-2xl border border-border p-6 animate-scale-in">
           <div className="flex items-center gap-3 mb-4">
             <h2 className="text-lg font-semibold text-text">
@@ -435,11 +442,11 @@ export default function CreateDokumentasiPage() {
           <p className="text-sm text-text-secondary mb-4">
             {isSingle
               ? 'Upload 1 foto dokumentasi (JPG, PNG, WebP)'
-              : `Maksimal ${MAX_PHOTOS_PER_ENTRY} foto (JPG, PNG, WebP)`}
+              : `Layout ${layouts.find(l => l.value === layout)?.label || layout} — Maksimal ${maxFiles} foto (JPG, PNG, WebP)`}
           </p>
 
-          {/* Show dropzone only if not reached max files */}
-          {files.length < maxFiles && (
+          {/* Show dropzone if not reached absolute max */}
+          {files.length < (isSingle ? 1 : MAX_PHOTOS_PER_ENTRY) && (
             <div
               {...getRootProps()}
               className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
@@ -526,16 +533,32 @@ export default function CreateDokumentasiPage() {
             </div>
           )}
 
+          {/* Warning if photos exceed capacity */}
+          {!isSingle && files.length > maxFiles && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
+              <svg className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-amber-800">Jumlah foto melebihi kapasitas layout</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Layout <strong>{layouts.find(l => l.value === layout)?.label}</strong> maksimal {maxFiles} foto, Anda memilih {files.length} foto.
+                  Kurangi foto atau <button onClick={() => setStep(layoutStep)} className="underline font-semibold hover:text-amber-900">ganti layout</button> yang lebih besar.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between mt-6">
             <button
-              onClick={() => { setStep(1); files.forEach(f => URL.revokeObjectURL(f.preview)); setFiles([]); }}
+              onClick={() => { setStep(isSingle ? 1 : layoutStep); files.forEach(f => URL.revokeObjectURL(f.preview)); setFiles([]); }}
               className="px-4 py-2.5 text-sm font-medium text-text-secondary hover:text-text transition-colors"
             >
               Kembali
             </button>
             <button
               onClick={handleUpload}
-              disabled={files.length === 0 || uploading}
+              disabled={files.length === 0 || uploading || (!isSingle && files.length > maxFiles)}
               className="flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md shadow-primary-500/20"
             >
               {uploading ? (
@@ -559,7 +582,7 @@ export default function CreateDokumentasiPage() {
         </div>
       )}
 
-      {/* Step 3 (collage only): Choose Layout */}
+      {/* Step 2 (collage only): Choose Layout */}
       {step === layoutStep && (
         <div className="bg-white rounded-2xl border border-border p-6 animate-scale-in">
           <h2 className="text-lg font-semibold text-text mb-4">Pilih Layout Kolase</h2>
@@ -638,27 +661,25 @@ export default function CreateDokumentasiPage() {
             ))}
           </div>
 
-          {/* Preview thumbnails */}
-          <div className="bg-surface-dim rounded-xl p-3 mb-4">
-            <p className="text-xs font-medium text-text-secondary mb-2">Foto yang diupload ({uploadedPaths.length})</p>
-            <div className="flex gap-1.5 flex-wrap">
-              {uploadedPaths.map((p, i) => (
-                <div key={i} className="w-12 h-12 rounded-lg overflow-hidden bg-border">
-                  <img src={p} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                </div>
-              ))}
-            </div>
-          </div>
+
 
           <div className="flex justify-between">
             <button
-              onClick={() => setStep(2)}
+              onClick={() => setStep(1)}
               className="px-4 py-2.5 text-sm font-medium text-text-secondary hover:text-text transition-colors"
             >
               Kembali
             </button>
             <button
-              onClick={() => setStep(dataStep)}
+              onClick={() => {
+                // Reset files if layout changed and exceeds new capacity
+                if (files.length > (layoutMaxPhotos[layout] || MAX_PHOTOS_PER_ENTRY)) {
+                  files.forEach(f => URL.revokeObjectURL(f.preview));
+                  setFiles([]);
+                  setUploadedPaths([]);
+                }
+                setStep(uploadStep);
+              }}
               className="flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-xl hover:bg-primary-700 transition-colors shadow-md shadow-primary-500/20"
             >
               Lanjut
@@ -785,7 +806,7 @@ export default function CreateDokumentasiPage() {
 
           <div className="flex justify-between mt-6">
             <button
-              onClick={() => setStep(isSingle ? 2 : layoutStep)}
+              onClick={() => setStep(isSingle ? 2 : uploadStep)}
               className="px-4 py-2.5 text-sm font-medium text-text-secondary hover:text-text transition-colors"
             >
               Kembali
