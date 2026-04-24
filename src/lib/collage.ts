@@ -320,11 +320,35 @@ export async function generateCollage(options: CollageOptions): Promise<string> 
     case 'grid-1x3x3x3':
       photoComposites = await createHeroGridComposites(imageBuffers, 3, 3, headerOffset);
       break;
-    case 'horizontal':
-      photoComposites = await createHorizontalComposites(imageBuffers, headerOffset);
+    case 'mosaic-4a':
+      photoComposites = await createMosaic4a(imageBuffers, headerOffset);
       break;
-    case 'vertical':
-      photoComposites = await createVerticalComposites(imageBuffers, headerOffset);
+    case 'mosaic-5a':
+      photoComposites = await createMosaic5a(imageBuffers, headerOffset);
+      break;
+    case 'mosaic-6a':
+      photoComposites = await createMosaic6a(imageBuffers, headerOffset);
+      break;
+    case 'mosaic-6b':
+      photoComposites = await createMosaic6b(imageBuffers, headerOffset);
+      break;
+    case 'mosaic-6c':
+      photoComposites = await createMosaic6c(imageBuffers, headerOffset);
+      break;
+    case 'mosaic-7a':
+      photoComposites = await createMosaic7a(imageBuffers, headerOffset);
+      break;
+    case 'mosaic-7b':
+      photoComposites = await createMosaic7b(imageBuffers, headerOffset);
+      break;
+    case 'mosaic-7c':
+      photoComposites = await createMosaic7c(imageBuffers, headerOffset);
+      break;
+    case 'mosaic-8a':
+      photoComposites = await createMosaic8a(imageBuffers, headerOffset);
+      break;
+    case 'mosaic-8b':
+      photoComposites = await createMosaic8b(imageBuffers, headerOffset);
       break;
     default:
       if (count <= 4) {
@@ -351,13 +375,13 @@ export async function generateCollage(options: CollageOptions): Promise<string> 
   } else if (layout === 'grid-1x3x3x3') {
     // 1 hero + 3 rows of 3: ratio ~1.6
     canvasHeight = Math.round(COLLAGE_SIZE * 1.6) + headerOffset;
-  } else if (layout === 'horizontal') {
-    const gap = COLLAGE_GAP;
-    canvasHeight = 400 + gap * 2 + headerOffset;
-  } else if (layout === 'vertical') {
-    const gap = COLLAGE_GAP;
-    canvasWidth = 600 + gap * 2;
-    canvasHeight = COLLAGE_SIZE + headerOffset;
+  } else if (
+    layout === 'mosaic-4a' || layout === 'mosaic-5a' || layout === 'mosaic-6a' ||
+    layout === 'mosaic-6b' || layout === 'mosaic-6c' || layout === 'mosaic-7a' ||
+    layout === 'mosaic-7b' || layout === 'mosaic-7c' || layout === 'mosaic-8a' ||
+    layout === 'mosaic-8b'
+  ) {
+    canvasHeight = Math.round(COLLAGE_SIZE * 1.33) + headerOffset;
   }
 
   // Create background with education theme
@@ -444,46 +468,6 @@ async function createGridComposites(
   });
 }
 
-async function createHorizontalComposites(
-  imageBuffers: Buffer[],
-  topOffset: number
-): Promise<{ input: Buffer; left: number; top: number }[]> {
-  const gap = COLLAGE_GAP;
-  const count = imageBuffers.length;
-  const cellHeight = 400;
-  const cellWidth = Math.floor((COLLAGE_SIZE - gap * (count + 1)) / count);
-
-  const resized = await Promise.all(
-    imageBuffers.map((buf) => resizeWithBorder(buf, cellWidth, cellHeight))
-  );
-
-  return resized.map((buf, index) => ({
-    input: buf,
-    left: gap + index * (cellWidth + gap),
-    top: topOffset + gap,
-  }));
-}
-
-async function createVerticalComposites(
-  imageBuffers: Buffer[],
-  topOffset: number
-): Promise<{ input: Buffer; left: number; top: number }[]> {
-  const gap = COLLAGE_GAP;
-  const count = imageBuffers.length;
-  const cellWidth = 600;
-  const cellHeight = Math.floor((COLLAGE_SIZE - gap * (count + 1)) / count);
-
-  const resized = await Promise.all(
-    imageBuffers.map((buf) => resizeWithBorder(buf, cellWidth, cellHeight))
-  );
-
-  return resized.map((buf, index) => ({
-    input: buf,
-    left: gap,
-    top: topOffset + gap + index * (cellHeight + gap),
-  }));
-}
-
 /**
  * Create hero grid composites: 1 large photo spanning full width on top,
  * remaining photos in rows of `cols` below.
@@ -535,6 +519,341 @@ async function createHeroGridComposites(
       top: topOffset + gap + heroHeight + gap + row * (cellHeight + gap),
     });
   });
+
+  return composites;
+}
+
+/**
+ * Mosaic 4a: 1 big top, bottom row = 1 tall left + 2 stacked right
+ * Matches reference image 1
+ */
+async function createMosaic4a(
+  imageBuffers: Buffer[],
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const W = COLLAGE_SIZE;
+  const H = Math.round(COLLAGE_SIZE * 1.33);
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  // Photo 1: top, full width, ~50% height
+  const topH = Math.floor((H - gap * 3) * 0.5);
+  const topW = W - gap * 2;
+  composites.push({ input: await resizeWithBorder(imageBuffers[0], topW, topH), left: gap, top: topOffset + gap });
+
+  // Bottom section
+  const botH = H - topH - gap * 3;
+  const leftW = Math.floor((W - gap * 3) * 0.5);
+  const rightW = W - leftW - gap * 3;
+  const smallH = Math.floor((botH - gap) / 2);
+
+  // Photo 2: bottom-left, tall
+  composites.push({ input: await resizeWithBorder(imageBuffers[1 % imageBuffers.length], leftW, botH), left: gap, top: topOffset + gap + topH + gap });
+  // Photo 3: bottom-right-top
+  composites.push({ input: await resizeWithBorder(imageBuffers[2 % imageBuffers.length], rightW, smallH), left: gap + leftW + gap, top: topOffset + gap + topH + gap });
+  // Photo 4: bottom-right-bottom
+  composites.push({ input: await resizeWithBorder(imageBuffers[3 % imageBuffers.length], rightW, smallH), left: gap + leftW + gap, top: topOffset + gap + topH + gap + smallH + gap });
+
+  return composites;
+}
+
+/**
+ * Mosaic 5a: 2 top, 1 wide middle, 2 bottom
+ * Matches reference image 2
+ */
+async function createMosaic5a(
+  imageBuffers: Buffer[],
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const W = COLLAGE_SIZE;
+  const H = Math.round(COLLAGE_SIZE * 1.33);
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  const rowH = Math.floor((H - gap * 4) / 3);
+  const halfW = Math.floor((W - gap * 3) / 2);
+  const fullW = W - gap * 2;
+
+  // Row 1: 2 photos
+  composites.push({ input: await resizeWithBorder(imageBuffers[0], halfW, rowH), left: gap, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[1 % imageBuffers.length], halfW, rowH), left: gap + halfW + gap, top: topOffset + gap });
+  // Row 2: 1 wide photo
+  composites.push({ input: await resizeWithBorder(imageBuffers[2 % imageBuffers.length], fullW, rowH), left: gap, top: topOffset + gap + rowH + gap });
+  // Row 3: 2 photos
+  composites.push({ input: await resizeWithBorder(imageBuffers[3 % imageBuffers.length], halfW, rowH), left: gap, top: topOffset + gap + rowH * 2 + gap * 2 });
+  composites.push({ input: await resizeWithBorder(imageBuffers[4 % imageBuffers.length], halfW, rowH), left: gap + halfW + gap, top: topOffset + gap + rowH * 2 + gap * 2 });
+
+  return composites;
+}
+
+/**
+ * Mosaic 6a: 2 large left (stacked), 4 small right (stacked in pairs)
+ * Matches reference image 3
+ */
+async function createMosaic6a(
+  imageBuffers: Buffer[],
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const W = COLLAGE_SIZE;
+  const H = Math.round(COLLAGE_SIZE * 1.33);
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  const leftW = Math.floor((W - gap * 3) * 0.55);
+  const rightW = W - leftW - gap * 3;
+  const halfH = Math.floor((H - gap * 3) / 2);
+  const smallH = Math.floor((halfH - gap) / 2);
+
+  // Photo 1: large left-top
+  composites.push({ input: await resizeWithBorder(imageBuffers[0], leftW, halfH), left: gap, top: topOffset + gap });
+  // Photo 2: large left-bottom
+  composites.push({ input: await resizeWithBorder(imageBuffers[1 % imageBuffers.length], leftW, halfH), left: gap, top: topOffset + gap + halfH + gap });
+
+  // Right column: 4 small photos stacked
+  const rX = gap + leftW + gap;
+  composites.push({ input: await resizeWithBorder(imageBuffers[2 % imageBuffers.length], rightW, smallH), left: rX, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[3 % imageBuffers.length], rightW, smallH), left: rX, top: topOffset + gap + smallH + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[4 % imageBuffers.length], rightW, smallH), left: rX, top: topOffset + gap + (smallH + gap) * 2 });
+  composites.push({ input: await resizeWithBorder(imageBuffers[5 % imageBuffers.length], rightW, smallH), left: rX, top: topOffset + gap + (smallH + gap) * 3 });
+
+  return composites;
+}
+
+/**
+ * Mosaic 6b: Mixed — large photos left, small right, alternating rows
+ * Matches reference image 4
+ */
+async function createMosaic6b(
+  imageBuffers: Buffer[],
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const W = COLLAGE_SIZE;
+  const H = Math.round(COLLAGE_SIZE * 1.33);
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  const leftW = Math.floor((W - gap * 3) * 0.55);
+  const rightW = W - leftW - gap * 3;
+  const rowH = Math.floor((H - gap * 4) / 3);
+  const smallH = Math.floor((rowH - gap) / 2);
+
+  const rX = gap + leftW + gap;
+
+  // Row 1: large left + 2 small right
+  composites.push({ input: await resizeWithBorder(imageBuffers[0], leftW, rowH), left: gap, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[3 % imageBuffers.length], rightW, smallH), left: rX, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[4 % imageBuffers.length], rightW, smallH), left: rX, top: topOffset + gap + smallH + gap });
+
+  // Row 2: large left
+  composites.push({ input: await resizeWithBorder(imageBuffers[1 % imageBuffers.length], leftW, rowH), left: gap, top: topOffset + gap + rowH + gap });
+
+  // Row 3: large left + large right
+  composites.push({ input: await resizeWithBorder(imageBuffers[2 % imageBuffers.length], leftW, rowH), left: gap, top: topOffset + gap + (rowH + gap) * 2 });
+  composites.push({ input: await resizeWithBorder(imageBuffers[5 % imageBuffers.length], rightW, rowH * 2 + gap), left: rX, top: topOffset + gap + rowH + gap });
+
+  return composites;
+}
+
+/**
+ * Mosaic 7a: 1 large center-left, 3 small stacked right, 3 small bottom row
+ * Matches reference image 5
+ */
+async function createMosaic7a(
+  imageBuffers: Buffer[],
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const W = COLLAGE_SIZE;
+  const H = Math.round(COLLAGE_SIZE * 1.33);
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  const topSectionH = Math.floor((H - gap * 3) * 0.65);
+  const botH = H - topSectionH - gap * 3;
+  const leftW = Math.floor((W - gap * 3) * 0.55);
+  const rightW = W - leftW - gap * 3;
+  const smallRightH = Math.floor((topSectionH - gap * 2) / 3);
+  const thirdW = Math.floor((W - gap * 4) / 3);
+
+  // Photo 1: large left
+  composites.push({ input: await resizeWithBorder(imageBuffers[0], leftW, topSectionH), left: gap, top: topOffset + gap });
+
+  // Right column: 3 small stacked
+  const rX = gap + leftW + gap;
+  composites.push({ input: await resizeWithBorder(imageBuffers[1 % imageBuffers.length], rightW, smallRightH), left: rX, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[2 % imageBuffers.length], rightW, smallRightH), left: rX, top: topOffset + gap + smallRightH + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[3 % imageBuffers.length], rightW, smallRightH), left: rX, top: topOffset + gap + (smallRightH + gap) * 2 });
+
+  // Bottom row: 3 photos
+  const botY = topOffset + gap + topSectionH + gap;
+  composites.push({ input: await resizeWithBorder(imageBuffers[4 % imageBuffers.length], thirdW, botH), left: gap, top: botY });
+  composites.push({ input: await resizeWithBorder(imageBuffers[5 % imageBuffers.length], thirdW, botH), left: gap + thirdW + gap, top: botY });
+  composites.push({ input: await resizeWithBorder(imageBuffers[6 % imageBuffers.length], thirdW, botH), left: gap + (thirdW + gap) * 2, top: botY });
+
+  return composites;
+}
+
+/**
+ * Mosaic 6c: 1 large left + 2 stacked right (top), 3 bottom
+ */
+async function createMosaic6c(
+  imageBuffers: Buffer[],
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const W = COLLAGE_SIZE;
+  const H = Math.round(COLLAGE_SIZE * 1.33);
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  const topSectionH = Math.floor((H - gap * 3) * 0.6);
+  const botH = H - topSectionH - gap * 3;
+  const leftW = Math.floor((W - gap * 3) * 0.55);
+  const rightW = W - leftW - gap * 3;
+  const smallRightH = Math.floor((topSectionH - gap) / 2);
+  const thirdW = Math.floor((W - gap * 4) / 3);
+
+  // Photo 1: large left
+  composites.push({ input: await resizeWithBorder(imageBuffers[0], leftW, topSectionH), left: gap, top: topOffset + gap });
+  // Photo 2: right-top
+  composites.push({ input: await resizeWithBorder(imageBuffers[1 % imageBuffers.length], rightW, smallRightH), left: gap + leftW + gap, top: topOffset + gap });
+  // Photo 3: right-bottom
+  composites.push({ input: await resizeWithBorder(imageBuffers[2 % imageBuffers.length], rightW, smallRightH), left: gap + leftW + gap, top: topOffset + gap + smallRightH + gap });
+
+  // Bottom row: 3 photos
+  const botY = topOffset + gap + topSectionH + gap;
+  composites.push({ input: await resizeWithBorder(imageBuffers[3 % imageBuffers.length], thirdW, botH), left: gap, top: botY });
+  composites.push({ input: await resizeWithBorder(imageBuffers[4 % imageBuffers.length], thirdW, botH), left: gap + thirdW + gap, top: botY });
+  composites.push({ input: await resizeWithBorder(imageBuffers[5 % imageBuffers.length], thirdW, botH), left: gap + (thirdW + gap) * 2, top: botY });
+
+  return composites;
+}
+
+/**
+ * Mosaic 7b: 2 top, 3 middle, 2 bottom
+ */
+async function createMosaic7b(
+  imageBuffers: Buffer[],
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const W = COLLAGE_SIZE;
+  const H = Math.round(COLLAGE_SIZE * 1.33);
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  const rowH = Math.floor((H - gap * 4) / 3);
+  const halfW = Math.floor((W - gap * 3) / 2);
+  const thirdW = Math.floor((W - gap * 4) / 3);
+
+  // Row 1: 2 photos
+  composites.push({ input: await resizeWithBorder(imageBuffers[0], halfW, rowH), left: gap, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[1 % imageBuffers.length], halfW, rowH), left: gap + halfW + gap, top: topOffset + gap });
+  // Row 2: 3 photos
+  const r2Y = topOffset + gap + rowH + gap;
+  composites.push({ input: await resizeWithBorder(imageBuffers[2 % imageBuffers.length], thirdW, rowH), left: gap, top: r2Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[3 % imageBuffers.length], thirdW, rowH), left: gap + thirdW + gap, top: r2Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[4 % imageBuffers.length], thirdW, rowH), left: gap + (thirdW + gap) * 2, top: r2Y });
+  // Row 3: 2 photos
+  const r3Y = topOffset + gap + (rowH + gap) * 2;
+  composites.push({ input: await resizeWithBorder(imageBuffers[5 % imageBuffers.length], halfW, rowH), left: gap, top: r3Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[6 % imageBuffers.length], halfW, rowH), left: gap + halfW + gap, top: r3Y });
+
+  return composites;
+}
+
+/**
+ * Mosaic 7c: 3 top, 1 wide middle, 3 bottom
+ */
+async function createMosaic7c(
+  imageBuffers: Buffer[],
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const W = COLLAGE_SIZE;
+  const H = Math.round(COLLAGE_SIZE * 1.33);
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  const rowH = Math.floor((H - gap * 4) / 3);
+  const thirdW = Math.floor((W - gap * 4) / 3);
+  const fullW = W - gap * 2;
+
+  // Row 1: 3 photos
+  composites.push({ input: await resizeWithBorder(imageBuffers[0], thirdW, rowH), left: gap, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[1 % imageBuffers.length], thirdW, rowH), left: gap + thirdW + gap, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[2 % imageBuffers.length], thirdW, rowH), left: gap + (thirdW + gap) * 2, top: topOffset + gap });
+  // Row 2: 1 wide
+  const r2Y = topOffset + gap + rowH + gap;
+  composites.push({ input: await resizeWithBorder(imageBuffers[3 % imageBuffers.length], fullW, rowH), left: gap, top: r2Y });
+  // Row 3: 3 photos
+  const r3Y = topOffset + gap + (rowH + gap) * 2;
+  composites.push({ input: await resizeWithBorder(imageBuffers[4 % imageBuffers.length], thirdW, rowH), left: gap, top: r3Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[5 % imageBuffers.length], thirdW, rowH), left: gap + thirdW + gap, top: r3Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[6 % imageBuffers.length], thirdW, rowH), left: gap + (thirdW + gap) * 2, top: r3Y });
+
+  return composites;
+}
+
+/**
+ * Mosaic 8a: 3 top, 2 middle, 3 bottom
+ */
+async function createMosaic8a(
+  imageBuffers: Buffer[],
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const W = COLLAGE_SIZE;
+  const H = Math.round(COLLAGE_SIZE * 1.33);
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  const rowH = Math.floor((H - gap * 4) / 3);
+  const thirdW = Math.floor((W - gap * 4) / 3);
+  const leftMidW = Math.floor((W - gap * 3) * 0.45);
+  const rightMidW = W - leftMidW - gap * 3;
+
+  // Row 1: 3 photos
+  composites.push({ input: await resizeWithBorder(imageBuffers[0], thirdW, rowH), left: gap, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[1 % imageBuffers.length], thirdW, rowH), left: gap + thirdW + gap, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[2 % imageBuffers.length], thirdW, rowH), left: gap + (thirdW + gap) * 2, top: topOffset + gap });
+  // Row 2: 2 photos (unequal)
+  const r2Y = topOffset + gap + rowH + gap;
+  composites.push({ input: await resizeWithBorder(imageBuffers[3 % imageBuffers.length], leftMidW, rowH), left: gap, top: r2Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[4 % imageBuffers.length], rightMidW, rowH), left: gap + leftMidW + gap, top: r2Y });
+  // Row 3: 3 photos
+  const r3Y = topOffset + gap + (rowH + gap) * 2;
+  composites.push({ input: await resizeWithBorder(imageBuffers[5 % imageBuffers.length], thirdW, rowH), left: gap, top: r3Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[6 % imageBuffers.length], thirdW, rowH), left: gap + thirdW + gap, top: r3Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[7 % imageBuffers.length], thirdW, rowH), left: gap + (thirdW + gap) * 2, top: r3Y });
+
+  return composites;
+}
+
+/**
+ * Mosaic 8b: 3 top, 3 middle, 2 bottom
+ */
+async function createMosaic8b(
+  imageBuffers: Buffer[],
+  topOffset: number
+): Promise<{ input: Buffer; left: number; top: number }[]> {
+  const gap = COLLAGE_GAP;
+  const W = COLLAGE_SIZE;
+  const H = Math.round(COLLAGE_SIZE * 1.33);
+  const composites: { input: Buffer; left: number; top: number }[] = [];
+
+  const rowH = Math.floor((H - gap * 4) / 3);
+  const thirdW = Math.floor((W - gap * 4) / 3);
+  const halfW = Math.floor((W - gap * 3) / 2);
+
+  // Row 1: 3 photos
+  composites.push({ input: await resizeWithBorder(imageBuffers[0], thirdW, rowH), left: gap, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[1 % imageBuffers.length], thirdW, rowH), left: gap + thirdW + gap, top: topOffset + gap });
+  composites.push({ input: await resizeWithBorder(imageBuffers[2 % imageBuffers.length], thirdW, rowH), left: gap + (thirdW + gap) * 2, top: topOffset + gap });
+  // Row 2: 3 photos
+  const r2Y = topOffset + gap + rowH + gap;
+  composites.push({ input: await resizeWithBorder(imageBuffers[3 % imageBuffers.length], thirdW, rowH), left: gap, top: r2Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[4 % imageBuffers.length], thirdW, rowH), left: gap + thirdW + gap, top: r2Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[5 % imageBuffers.length], thirdW, rowH), left: gap + (thirdW + gap) * 2, top: r2Y });
+  // Row 3: 2 photos
+  const r3Y = topOffset + gap + (rowH + gap) * 2;
+  composites.push({ input: await resizeWithBorder(imageBuffers[6 % imageBuffers.length], halfW, rowH), left: gap, top: r3Y });
+  composites.push({ input: await resizeWithBorder(imageBuffers[7 % imageBuffers.length], halfW, rowH), left: gap + halfW + gap, top: r3Y });
 
   return composites;
 }

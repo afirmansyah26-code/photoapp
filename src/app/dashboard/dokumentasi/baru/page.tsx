@@ -69,12 +69,20 @@ export default function CreateDokumentasiPage() {
   // Layout max photo capacity
   const layoutMaxPhotos: Record<string, number> = {
     'grid-2x2': 4,
+    'mosaic-4a': 4,
+    'mosaic-5a': 5,
+    'mosaic-6a': 6,
+    'mosaic-6b': 6,
+    'mosaic-6c': 6,
     'grid-1x3x3': 7,
+    'mosaic-7a': 7,
+    'mosaic-7b': 7,
+    'mosaic-7c': 7,
+    'mosaic-8a': 8,
+    'mosaic-8b': 8,
     'grid-3x3': 9,
     'grid-1x3x3x3': 10,
     'grid-3x4': 12,
-    'horizontal': 12,
-    'vertical': 12,
   };
 
   const maxFiles = isSingle ? 1 : (layoutMaxPhotos[layout] || MAX_PHOTOS_PER_ENTRY);
@@ -308,12 +316,20 @@ export default function CreateDokumentasiPage() {
 
   const layouts: { value: CollageLayout; label: string; desc: string; max: number }[] = [
     { value: 'grid-2x2', label: 'Grid 2×2', desc: 'Maks 4 foto', max: 4 },
+    { value: 'mosaic-4a', label: 'Mosaic 4', desc: 'Maks 4 foto', max: 4 },
+    { value: 'mosaic-5a', label: 'Mosaic 5', desc: 'Maks 5 foto', max: 5 },
+    { value: 'mosaic-6a', label: 'Mosaic 6A', desc: 'Maks 6 foto', max: 6 },
+    { value: 'mosaic-6b', label: 'Mosaic 6B', desc: 'Maks 6 foto', max: 6 },
+    { value: 'mosaic-6c', label: 'Mosaic 6C', desc: 'Maks 6 foto', max: 6 },
     { value: 'grid-1x3x3', label: '1 Besar + 3×2', desc: 'Maks 7 foto', max: 7 },
+    { value: 'mosaic-7a', label: 'Mosaic 7A', desc: 'Maks 7 foto', max: 7 },
+    { value: 'mosaic-7b', label: 'Mosaic 7B', desc: 'Maks 7 foto', max: 7 },
+    { value: 'mosaic-7c', label: 'Mosaic 7C', desc: 'Maks 7 foto', max: 7 },
+    { value: 'mosaic-8a', label: 'Mosaic 8A', desc: 'Maks 8 foto', max: 8 },
+    { value: 'mosaic-8b', label: 'Mosaic 8B', desc: 'Maks 8 foto', max: 8 },
     { value: 'grid-3x3', label: 'Grid 3×3', desc: 'Maks 9 foto', max: 9 },
     { value: 'grid-1x3x3x3', label: '1 Besar + 3×3', desc: 'Maks 10 foto', max: 10 },
     { value: 'grid-3x4', label: 'Grid 3×4', desc: 'Maks 12 foto', max: 12 },
-    { value: 'horizontal', label: 'Horizontal', desc: 'Maks 12 foto', max: 12 },
-    { value: 'vertical', label: 'Vertikal', desc: 'Maks 12 foto', max: 12 },
   ];
 
   return (
@@ -485,51 +501,266 @@ export default function CreateDokumentasiPage() {
                   </p>
                 )}
               </div>
-              <div className={`grid gap-2 ${
-                isSingle ? 'grid-cols-1 max-w-sm' : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5'
-              }`}>
-                {files.map((f, i) => (
-                  <div
-                    key={f.preview}
-                    draggable={!isSingle && files.length > 1}
-                    onDragStart={() => handleDragStart(i)}
-                    onDragOver={(e) => handleDragOver(e, i)}
-                    onDrop={(e) => handleDrop(e, i)}
-                    onDragEnd={handleDragEnd}
-                    className={`relative group overflow-hidden bg-surface-dim rounded-xl transition-all duration-200 ${
-                      isSingle ? 'aspect-auto max-h-64' : 'aspect-square'
-                    } ${
-                      !isSingle && files.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''
-                    } ${
-                      dragIdx === i ? 'opacity-40 scale-95 ring-2 ring-primary-400' : ''
-                    } ${
-                      dragOverIdx === i && dragIdx !== i ? 'ring-2 ring-primary-500 ring-offset-2 scale-105' : ''
-                    }`}
-                  >
-                    <img src={f.preview} alt={`Preview ${i + 1}`} className={`w-full h-full ${isSingle ? 'object-contain' : 'object-cover'} pointer-events-none`} />
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeFile(i); }}
-                      className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+
+              {/* Layout Preview for collage mode */}
+              {!isSingle && files.length > 0 ? (
+                <div className="bg-surface-dim rounded-xl p-3">
+                  <p className="text-xs font-medium text-text-secondary mb-2">Preview Layout: {layouts.find(l => l.value === layout)?.label}</p>
+                  {(() => {
+                    // Define layout positions as CSS grid areas
+                    type LayoutSlot = { gridArea: string; label: string };
+                    const getLayoutConfig = (): { gridTemplate: string; slots: LayoutSlot[]; aspectRatio: string } => {
+                      switch (layout) {
+                        case 'grid-2x2':
+                          return {
+                            gridTemplate: `"a b" 1fr "c d" 1fr / 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' }, { gridArea: 'd', label: '4' },
+                            ],
+                            aspectRatio: '1 / 1',
+                          };
+                        case 'mosaic-4a':
+                          return {
+                            gridTemplate: `"a a" 3fr "b c" 1fr "b d" 1fr / 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' }, { gridArea: 'd', label: '4' },
+                            ],
+                            aspectRatio: '3 / 4',
+                          };
+                        case 'mosaic-5a':
+                          return {
+                            gridTemplate: `"a b" 1fr "c c" 1fr "d e" 1fr / 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' },
+                              { gridArea: 'd', label: '4' }, { gridArea: 'e', label: '5' },
+                            ],
+                            aspectRatio: '3 / 4',
+                          };
+                        case 'mosaic-6a':
+                          return {
+                            gridTemplate: `"a c" 1fr "a d" 1fr "b e" 1fr "b f" 1fr / 55fr 45fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' }, { gridArea: 'd', label: '4' },
+                              { gridArea: 'e', label: '5' }, { gridArea: 'f', label: '6' },
+                            ],
+                            aspectRatio: '3 / 4',
+                          };
+                        case 'mosaic-6b':
+                          return {
+                            gridTemplate: `"a d" 1fr "a e" 1fr "b f" 2fr "c f" 1fr / 55fr 45fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' }, { gridArea: 'd', label: '4' },
+                              { gridArea: 'e', label: '5' }, { gridArea: 'f', label: '6' },
+                            ],
+                            aspectRatio: '3 / 4',
+                          };
+                        case 'mosaic-7a':
+                          return {
+                            gridTemplate: `"a a a a b b" 1fr "a a a a c c" 1fr "a a a a d d" 1fr "e e f f g g" 1.5fr / 1fr 1fr 1fr 1fr 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' }, { gridArea: 'd', label: '4' },
+                              { gridArea: 'e', label: '5' }, { gridArea: 'f', label: '6' },
+                              { gridArea: 'g', label: '7' },
+                            ],
+                            aspectRatio: '3 / 4',
+                          };
+                        case 'grid-1x3x3':
+                          return {
+                            gridTemplate: `"a a a" 2fr "b c d" 1fr "e f g" 1fr / 1fr 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' },
+                              { gridArea: 'b', label: '2' }, { gridArea: 'c', label: '3' }, { gridArea: 'd', label: '4' },
+                              { gridArea: 'e', label: '5' }, { gridArea: 'f', label: '6' }, { gridArea: 'g', label: '7' },
+                            ],
+                            aspectRatio: '4 / 5',
+                          };
+                        case 'grid-3x3':
+                          return {
+                            gridTemplate: `"a b c" 1fr "d e f" 1fr "g h i" 1fr / 1fr 1fr 1fr`,
+                            slots: Array.from({ length: 9 }, (_, i) => ({
+                              gridArea: String.fromCharCode(97 + i), label: `${i + 1}`,
+                            })),
+                            aspectRatio: '1 / 1',
+                          };
+                        case 'grid-1x3x3x3':
+                          return {
+                            gridTemplate: `"a a a" 1.5fr "b c d" 1fr "e f g" 1fr "h i j" 1fr / 1fr 1fr 1fr`,
+                            slots: Array.from({ length: 10 }, (_, i) => ({
+                              gridArea: String.fromCharCode(97 + i), label: `${i + 1}`,
+                            })),
+                            aspectRatio: '3 / 5',
+                          };
+                        case 'grid-3x4':
+                          return {
+                            gridTemplate: `"a b c" 1fr "d e f" 1fr "g h i" 1fr "j k l" 1fr / 1fr 1fr 1fr`,
+                            slots: Array.from({ length: 12 }, (_, i) => ({
+                              gridArea: String.fromCharCode(97 + i), label: `${i + 1}`,
+                            })),
+                            aspectRatio: '3 / 4',
+                          };
+                        case 'mosaic-6c':
+                          return {
+                            gridTemplate: `"a a a a b b" 1fr "a a a a c c" 1fr "d d e e f f" 1fr / 1fr 1fr 1fr 1fr 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' },
+                              { gridArea: 'd', label: '4' }, { gridArea: 'e', label: '5' },
+                              { gridArea: 'f', label: '6' },
+                            ],
+                            aspectRatio: '3 / 4',
+                          };
+                        case 'mosaic-7b':
+                          return {
+                            gridTemplate: `"a a a b b b" 1fr "c c d d e e" 1fr "f f f g g g" 1fr / 1fr 1fr 1fr 1fr 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' }, { gridArea: 'd', label: '4' },
+                              { gridArea: 'e', label: '5' },
+                              { gridArea: 'f', label: '6' }, { gridArea: 'g', label: '7' },
+                            ],
+                            aspectRatio: '3 / 4',
+                          };
+                        case 'mosaic-7c':
+                          return {
+                            gridTemplate: `"a b c" 1fr "d d d" 1fr "e f g" 1fr / 1fr 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' }, { gridArea: 'd', label: '4' },
+                              { gridArea: 'e', label: '5' }, { gridArea: 'f', label: '6' },
+                              { gridArea: 'g', label: '7' },
+                            ],
+                            aspectRatio: '3 / 4',
+                          };
+                        case 'mosaic-8a':
+                          return {
+                            gridTemplate: `"a a b b c c" 1fr "d d d e e e" 1fr "f f g g h h" 1fr / 1fr 1fr 1fr 1fr 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' },
+                              { gridArea: 'd', label: '4' }, { gridArea: 'e', label: '5' },
+                              { gridArea: 'f', label: '6' }, { gridArea: 'g', label: '7' },
+                              { gridArea: 'h', label: '8' },
+                            ],
+                            aspectRatio: '3 / 4',
+                          };
+                        case 'mosaic-8b':
+                          return {
+                            gridTemplate: `"a a b b c c" 1fr "d d e e f f" 1fr "g g g h h h" 1fr / 1fr 1fr 1fr 1fr 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' },
+                              { gridArea: 'd', label: '4' }, { gridArea: 'e', label: '5' },
+                              { gridArea: 'f', label: '6' },
+                              { gridArea: 'g', label: '7' }, { gridArea: 'h', label: '8' },
+                            ],
+                            aspectRatio: '3 / 4',
+                          };
+                        default:
+                          return {
+                            gridTemplate: `"a b" 1fr "c d" 1fr / 1fr 1fr`,
+                            slots: [
+                              { gridArea: 'a', label: '1' }, { gridArea: 'b', label: '2' },
+                              { gridArea: 'c', label: '3' }, { gridArea: 'd', label: '4' },
+                            ],
+                            aspectRatio: '1 / 1',
+                          };
+                      }
+                    };
+                    const config = getLayoutConfig();
+                    return (
+                      <div
+                        className="w-full max-w-md mx-auto bg-[#f5f1eb] rounded-lg overflow-hidden"
+                        style={{ aspectRatio: config.aspectRatio }}
+                      >
+                        <div
+                          className="w-full h-full"
+                          style={{
+                            display: 'grid',
+                            gridTemplate: config.gridTemplate,
+                            gap: '4px',
+                            padding: '4px',
+                          }}
+                        >
+                          {config.slots.map((slot, i) => {
+                            const fileItem = files[i];
+                            return (
+                              <div
+                                key={slot.gridArea}
+                                draggable={!!fileItem && files.length > 1}
+                                onDragStart={() => fileItem && handleDragStart(i)}
+                                onDragOver={(e) => handleDragOver(e, i)}
+                                onDrop={(e) => handleDrop(e, i)}
+                                onDragEnd={handleDragEnd}
+                                className={`relative group rounded-md overflow-hidden transition-all duration-200 ${
+                                  fileItem
+                                    ? 'cursor-grab active:cursor-grabbing'
+                                    : 'bg-gray-200/60 border-2 border-dashed border-gray-300'
+                                } ${
+                                  dragIdx === i ? 'opacity-40 scale-[0.97] ring-2 ring-primary-400' : ''
+                                } ${
+                                  dragOverIdx === i && dragIdx !== i ? 'ring-2 ring-primary-500 ring-offset-1 scale-[1.02]' : ''
+                                }`}
+                                style={{ gridArea: slot.gridArea }}
+                              >
+                                {fileItem ? (
+                                  <>
+                                    <img
+                                      src={fileItem.preview}
+                                      alt={`Foto ${slot.label}`}
+                                      className="w-full h-full object-cover pointer-events-none"
+                                    />
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); removeFile(i); }}
+                                      className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                    >
+                                      <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                    <div className="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                                      {slot.label}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-medium">
+                                    {slot.label}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : isSingle && files.length > 0 ? (
+                /* Single photo preview */
+                <div className={`grid gap-2 grid-cols-1 max-w-sm`}>
+                  {files.map((f, i) => (
+                    <div
+                      key={f.preview}
+                      className="relative group overflow-hidden bg-surface-dim rounded-xl aspect-auto max-h-64"
                     >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                    {!isSingle && (
-                      <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
-                        {i + 1}
-                      </div>
-                    )}
-                    {!isSingle && files.length > 1 && (
-                      <div className="absolute top-1 left-1 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <svg className="w-4 h-4 drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" />
+                      <img src={f.preview} alt={`Preview ${i + 1}`} className="w-full h-full object-contain pointer-events-none" />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeFile(i); }}
+                        className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -551,7 +782,7 @@ export default function CreateDokumentasiPage() {
 
           <div className="flex justify-between mt-6">
             <button
-              onClick={() => { setStep(isSingle ? 1 : layoutStep); files.forEach(f => URL.revokeObjectURL(f.preview)); setFiles([]); }}
+              onClick={() => setStep(isSingle ? 1 : layoutStep)}
               className="px-4 py-2.5 text-sm font-medium text-text-secondary hover:text-text transition-colors"
             >
               Kembali
@@ -607,6 +838,59 @@ export default function CreateDokumentasiPage() {
                       <rect x="26" y="26" width="20" height="20" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
                     </svg>
                   )}
+                  {/* Mosaic 4a: 1 big top, 1 tall bottom-left, 2 small bottom-right */}
+                  {l.value === 'mosaic-4a' && (
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      <rect x="2" y="2" width="44" height="28" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="2" y="34" width="20" height="28" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="26" y="34" width="20" height="12" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="26" y="50" width="20" height="12" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
+                  )}
+                  {/* Mosaic 5a: 2 top, 1 wide middle, 2 bottom */}
+                  {l.value === 'mosaic-5a' && (
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      <rect x="2" y="2" width="20" height="18" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="26" y="2" width="20" height="18" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="24" width="44" height="18" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="2" y="46" width="20" height="16" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="26" y="46" width="20" height="16" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
+                  )}
+                  {/* Mosaic 6a: 2 large left, 4 small right */}
+                  {l.value === 'mosaic-6a' && (
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      <rect x="2" y="2" width="26" height="28" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="2" y="34" width="26" height="28" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="32" y="2" width="14" height="13" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="32" y="19" width="14" height="13" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="32" y="36" width="14" height="13" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="32" y="53" width="14" height="9" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
+                  )}
+                  {/* Mosaic 6b: mixed large+small alternating */}
+                  {l.value === 'mosaic-6b' && (
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      <rect x="2" y="2" width="26" height="18" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="32" y="2" width="14" height="8" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="32" y="14" width="14" height="8" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="24" width="26" height="18" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="32" y="24" width="14" height="38" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="46" width="26" height="16" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                    </svg>
+                  )}
+                  {/* Mosaic 7a: 1 large left, 3 small right, 3 bottom */}
+                  {l.value === 'mosaic-7a' && (
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      <rect x="2" y="2" width="26" height="40" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="32" y="2" width="14" height="12" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="32" y="18" width="14" height="12" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="32" y="34" width="14" height="8" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="46" width="13" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="46" width="13" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="46" width="12" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
+                  )}
                   {l.value === 'grid-1x3x3' && (
                     <svg width="48" height="56" viewBox="0 0 48 56" className="rounded">
                       <rect x="2" y="2" width="44" height="16" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
@@ -640,18 +924,65 @@ export default function CreateDokumentasiPage() {
                       )))}
                     </svg>
                   )}
-                  {l.value === 'horizontal' && (
-                    <svg width="48" height="28" viewBox="0 0 48 28" className="rounded">
-                      <rect x="2" y="2" width="12" height="24" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
-                      <rect x="18" y="2" width="12" height="24" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
-                      <rect x="34" y="2" width="12" height="24" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                  {/* Mosaic 6c: 1 large left + 2 right, 3 bottom */}
+                  {l.value === 'mosaic-6c' && (
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      <rect x="2" y="2" width="26" height="36" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="32" y="2" width="14" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="32" y="22" width="14" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="42" width="13" height="20" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="42" width="13" height="20" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="42" width="12" height="20" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
                     </svg>
                   )}
-                  {l.value === 'vertical' && (
-                    <svg width="28" height="48" viewBox="0 0 28 48" className="rounded">
-                      <rect x="2" y="2" width="24" height="12" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
-                      <rect x="2" y="18" width="24" height="12" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
-                      <rect x="2" y="34" width="24" height="12" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                  {/* Mosaic 7b: 2-3-2 rows */}
+                  {l.value === 'mosaic-7b' && (
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      <rect x="2" y="2" width="22" height="18" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="28" y="2" width="18" height="18" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="24" width="13" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="24" width="13" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="24" width="12" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="46" width="22" height="16" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="28" y="46" width="18" height="16" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
+                  )}
+                  {/* Mosaic 7c: 3-1-3 rows */}
+                  {l.value === 'mosaic-7c' && (
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      <rect x="2" y="2" width="13" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="2" width="13" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="2" width="12" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="24" width="44" height="18" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="2" y="46" width="13" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="46" width="13" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="46" width="12" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
+                  )}
+                  {/* Mosaic 8a: 3-2-3 rows */}
+                  {l.value === 'mosaic-8a' && (
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      <rect x="2" y="2" width="13" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="2" width="13" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="2" width="12" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="24" width="19" height="18" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="25" y="24" width="21" height="18" rx="3" className={layout === l.value ? 'fill-primary-500' : 'fill-gray-400'} />
+                      <rect x="2" y="46" width="13" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="46" width="13" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="46" width="12" height="16" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                    </svg>
+                  )}
+                  {/* Mosaic 8b: 3-3-2 rows */}
+                  {l.value === 'mosaic-8b' && (
+                    <svg width="48" height="64" viewBox="0 0 48 64" className="rounded">
+                      <rect x="2" y="2" width="13" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="2" width="13" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="2" width="12" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="24" width="13" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="18" y="24" width="13" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="34" y="24" width="12" height="18" rx="2" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="2" y="46" width="22" height="16" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
+                      <rect x="28" y="46" width="18" height="16" rx="3" className={layout === l.value ? 'fill-primary-400' : 'fill-gray-300'} />
                     </svg>
                   )}
                 </div>
@@ -671,15 +1002,7 @@ export default function CreateDokumentasiPage() {
               Kembali
             </button>
             <button
-              onClick={() => {
-                // Reset files if layout changed and exceeds new capacity
-                if (files.length > (layoutMaxPhotos[layout] || MAX_PHOTOS_PER_ENTRY)) {
-                  files.forEach(f => URL.revokeObjectURL(f.preview));
-                  setFiles([]);
-                  setUploadedPaths([]);
-                }
-                setStep(uploadStep);
-              }}
+              onClick={() => setStep(uploadStep)}
               className="flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-xl hover:bg-primary-700 transition-colors shadow-md shadow-primary-500/20"
             >
               Lanjut

@@ -35,7 +35,7 @@ export interface DokumentasiWithFotos extends Dokumentasi {
   fotos: Foto[];
 }
 
-export type CollageLayout = 'grid-1x1' | 'grid-2x2' | 'grid-3x3' | 'grid-3x4' | 'grid-1x3x3' | 'grid-1x3x3x3' | 'horizontal' | 'vertical';
+export type CollageLayout = 'grid-1x1' | 'grid-2x2' | 'grid-3x3' | 'grid-3x4' | 'grid-1x3x3' | 'grid-1x3x3x3' | 'mosaic-4a' | 'mosaic-5a' | 'mosaic-6a' | 'mosaic-6b' | 'mosaic-6c' | 'mosaic-7a' | 'mosaic-7b' | 'mosaic-7c' | 'mosaic-8a' | 'mosaic-8b';
 
 export interface JWTPayload {
   userId: number;
